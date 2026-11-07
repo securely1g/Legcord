@@ -184,6 +184,8 @@
                     console.log("Development build detected. Skipping updater.");
                 } else if (internal.isMicrosoftStore) {
                     console.log("Microsoft Store build detected. Skipping updater.")
+                } else if (window.internal.version.includes("-omarchy.")) {
+                    console.log("Omarchy build detected. Updates are installed from the fork manually.");
                 } else {
                     const response = await fetch("https://legcord.app/latest.json");
                     const data = await response.json();

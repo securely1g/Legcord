@@ -1,3 +1,5 @@
+> **Omarchy Mobile fork:** This branch adds a built-in touch layout and local
+> microphone dictation with automatic sending. See [setup, build, and rollback instructions](docs/omarchy-mobile.md).
 
 ![Legcord](https://github.com/user-attachments/assets/f7b007d4-44fa-4c88-96e4-0a448b568b5d)
 

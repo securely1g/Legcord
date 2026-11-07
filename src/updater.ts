@@ -1,19 +1,26 @@
 import { platform } from "node:os";
 import type { AllPublishOptions } from "builder-util-runtime";
+import { app } from "electron";
 import { AppImageUpdater, DebUpdater, MacUpdater } from "electron-updater";
 
+const isOmarchyBuild = app.getVersion().includes("-omarchy.");
 const updateProvider: AllPublishOptions = {
     provider: "github",
     repo: "Legcord",
-    owner: "Legcord",
+    owner: isOmarchyBuild ? "securely1g" : "Legcord",
 };
 
-if (platform() === "darwin") {
+// Fork builds are deployed as local packages until signed release assets are published.
+if (isOmarchyBuild) {
+    console.log("Omarchy build: install updates from the fork manually.");
+}
+
+if (!isOmarchyBuild && platform() === "darwin") {
     const autoUpdater = new MacUpdater(updateProvider);
     autoUpdater.checkForUpdatesAndNotify();
 }
 
-if (platform() === "linux") {
+if (!isOmarchyBuild && platform() === "linux") {
     const appimage = new AppImageUpdater(updateProvider);
     const deb = new DebUpdater(updateProvider);
 

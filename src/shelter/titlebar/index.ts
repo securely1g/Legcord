@@ -1,4 +1,6 @@
 /// <reference path="../../../node_modules/@uwu/shelter-defs/dist/shelter-defs/rootdefs.d.ts" />
+import { getWindowChrome } from "../../common/windowChrome.js";
+
 const {
     util: { log },
     flux: { dispatcher },
@@ -17,6 +19,7 @@ const titlebarNavControls = `
 `;
 
 const settings = window.legcord.settings.getConfig();
+const chrome = getWindowChrome(settings, window.legcord.platform);
 
 function injectButtonControls() {
     const elem = document.createElement("div");
@@ -66,25 +69,20 @@ function layerPop() {
 
 export function onLoad() {
     log("Legcord Titlebar Controller");
-    if (settings.windowStyle === "default") {
+    if (chrome.windowStyle === "default") {
         document.body.setAttribute("customTitlebar", "");
         injectButtonControls();
         return;
     }
 
-    // Native + transparency on macOS uses the same overlay chrome as "overlay" (Legcord#1095).
-    const overlayLike =
-        settings.windowStyle === "overlay" ||
-        (settings.windowStyle === "native" && window.legcord.platform === "darwin" && settings.transparency !== "none");
-
-    if (overlayLike) {
+    if (chrome.usesOverlayChrome) {
         document.body.setAttribute("customTitlebar", "");
         dispatcher.subscribe("LAYER_PUSH", layerPush);
         dispatcher.subscribe("LAYER_POP", layerPop);
         return;
     }
 
-    log("Unsupported window style");
+    log("No custom window controls needed");
 }
 
 export function onUnload() {

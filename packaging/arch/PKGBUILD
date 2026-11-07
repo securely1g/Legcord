@@ -1,0 +1,31 @@
+# Build the Electron app first; see docs/omarchy-mobile.md.
+pkgname=legcord-mobile-git
+pkgver=1.3.1.omarchy.1
+pkgrel=1
+pkgdesc='Legcord fork with a mobile layout and local voice dictation'
+arch=('x86_64')
+url='https://github.com/securely1g/Legcord/tree/codex/omarchy-mobile'
+license=('OSL-3.0')
+provides=("legcord=$pkgver")
+conflicts=('legcord' 'legcord-bin')
+depends=('electron44' 'python' 'libpulse' 'nodejs' 'libpipewire' 'whisper-cpp' 'ffmpeg')
+options=('!strip' '!debug')
+source=('legcord.sh' 'legcord.desktop')
+sha256sums=('849e3790d9dd5af415836e9542a59846beac28fc43c9f977b65252822ceeb203' 'ff7e529254ecdd8648c2fab63a3ed120b23d1e6951365bdc9cb82b03336ab104')
+
+prepare() {
+    # This manifest is generated from the local build, before transfer to the VM.
+    (cd "$startdir/../../dist" && sha256sum --check mobile-build.sha256)
+}
+
+package() {
+    local resources="$startdir/../../dist/linux-unpacked/resources"
+    install -Dm755 "$srcdir/legcord.sh" "$pkgdir/usr/bin/legcord"
+    install -Dm644 "$srcdir/legcord.desktop" "$pkgdir/usr/share/applications/legcord.desktop"
+    install -Dm644 "$startdir/../../assets/desktop.png" "$pkgdir/usr/share/icons/hicolor/512x512/apps/legcord.png"
+    install -Dm644 "$startdir/../../license.txt" "$pkgdir/usr/share/licenses/$pkgname/LICENSE.txt"
+    install -Dm644 "$resources/app.asar" "$pkgdir/usr/lib/legcord/app.asar"
+    if [[ -d "$resources/app.asar.unpacked" ]]; then
+        cp -a "$resources/app.asar.unpacked" "$pkgdir/usr/lib/legcord/"
+    fi
+}

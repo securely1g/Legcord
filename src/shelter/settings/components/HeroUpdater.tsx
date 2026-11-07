@@ -20,6 +20,18 @@ async function checkForUpdates() {
 const DOWNLOAD_URL = "https://legcord.app/download";
 
 export const HeroUpdater = () => {
+    if (window.legcord.version.includes("-omarchy.")) {
+        return (
+            <div class={classes.hero}>
+                <Header tag={HeaderTags.H3}>Omarchy Mobile Build</Header>
+                <Text>Updates for this build are installed manually from the Legcord fork.</Text>
+                <Button onClick={() => window.open("https://github.com/securely1g/Legcord", "_blank")}>
+                    Open Fork
+                </Button>
+            </div>
+        );
+    }
+
     const [checking, setChecking] = createSignal(false);
     const [updateAvailable, setUpdateAvailable] = createSignal<boolean | null>(null);
 

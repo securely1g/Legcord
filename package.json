@@ -1,6 +1,6 @@
 {
     "name": "legcord",
-    "version": "1.3.1",
+    "version": "1.3.1-omarchy.1",
     "description": "Legcord is a custom client designed to enhance your Discord experience while keeping everything lightweight.",
     "main": "ts-out/main.js",
     "engines": {
@@ -19,19 +19,20 @@
         "test": "node --experimental-strip-types --import ./tests/register-ts.mjs --test tests/*.test.ts",
         "postinstall": "electron-builder install-app-deps",
         "CIbuild": "pnpm run build && electron-builder --linux zip && electron-builder --windows zip && electron-builder --macos zip",
-        "updateMeta": "node --experimental-strip-types scripts/utils/updateMeta.ts"
+        "updateMeta": "node --experimental-strip-types scripts/utils/updateMeta.ts",
+        "package:mobile": "pnpm run build && electron-builder --linux --dir --publish never && node scripts/build/mobileManifest.mjs"
     },
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/Legcord/Legcord.git"
+        "url": "git+https://github.com/securely1g/Legcord.git"
     },
     "author": "smartfrigde",
     "license": "OSL-3.0",
     "type": "module",
     "bugs": {
-        "url": "https://github.com/Legcord/Legcord/issues"
+        "url": "https://github.com/securely1g/Legcord/issues"
     },
-    "homepage": "https://github.com/Legcord/Legcord#readme",
+    "homepage": "https://github.com/securely1g/Legcord/tree/codex/omarchy-mobile",
     "devDependencies": {
         "@biomejs/biome": "2.5.5",
         "@rolldown-plugin/solid": "^0.1.0",

@@ -1,0 +1,27 @@
+[Desktop Entry]
+Name=Legcord
+Comment=Legcord with mobile layout and local voice dictation
+Exec=legcord %U
+Terminal=false
+Type=Application
+Icon=legcord
+StartupWMClass=legcord
+MimeType=x-scheme-handler/discord;
+Categories=Network;
+Actions=mute;deafen;leave;opensettings;
+
+[Desktop Action mute]
+Name=Toggle Mute
+Exec=legcord --mute
+
+[Desktop Action deafen]
+Name=Toggle Deafen
+Exec=legcord --deafen
+
+[Desktop Action leave]
+Name=Leave Call
+Exec=legcord --leave
+
+[Desktop Action opensettings]
+Name=Open Settings
+Exec=legcord --opensettings

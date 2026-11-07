@@ -63,10 +63,13 @@ function injectTitlebar(isOverlay?: boolean): void {
     };
 }
 
-switch (ipcRenderer.sendSync("getConfig", "windowStyle")) {
-    case "legacy":
-        injectTitlebar(false);
-        break;
-    default:
-        break;
+// Mobile mode uses a native frame even when the saved desktop preference is legacy.
+if (!ipcRenderer.sendSync("getConfig", "mobileMode")) {
+    switch (ipcRenderer.sendSync("getConfig", "windowStyle")) {
+        case "legacy":
+            injectTitlebar(false);
+            break;
+        default:
+            break;
+    }
 }

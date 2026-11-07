@@ -10,6 +10,7 @@ import "./newTitlebar.mjs";
 import "./titlebar.mjs";
 import "./themes.js";
 import "./inviteBackButton.mjs";
+import "./dictation.mjs";
 
 console.log("Legcord");
 window.localStorage.setItem("hideNag", "true");

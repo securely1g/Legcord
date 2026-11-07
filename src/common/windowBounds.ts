@@ -5,6 +5,10 @@ export const DEFAULT_WINDOW_HEIGHT = 600;
 export const MIN_WINDOW_WIDTH = 400;
 export const MIN_WINDOW_HEIGHT = 300;
 
+export function getMinWindowWidth(mobileMode: boolean): number {
+    return mobileMode ? 320 : MIN_WINDOW_WIDTH;
+}
+
 /** At least this much of the window must sit inside the workArea to count as visible. */
 const MIN_VISIBLE_PX = 50;
 
@@ -44,12 +48,17 @@ function intersectsWorkArea(rect: Rectangle, workArea: Rectangle, minVisible: nu
     return visibleW >= minVisible && visibleH >= minVisible;
 }
 
-function fitSizeToWorkArea(width: number, height: number, workArea: Rectangle): { width: number; height: number } {
-    const fittedWidth = Math.min(Math.max(width, MIN_WINDOW_WIDTH), Math.max(workArea.width, MIN_WINDOW_WIDTH));
+function fitSizeToWorkArea(
+    width: number,
+    height: number,
+    workArea: Rectangle,
+    minWidth: number,
+): { width: number; height: number } {
+    const fittedWidth = Math.min(Math.max(width, minWidth), Math.max(workArea.width, minWidth));
     const fittedHeight = Math.min(Math.max(height, MIN_WINDOW_HEIGHT), Math.max(workArea.height, MIN_WINDOW_HEIGHT));
     // Prefer staying within the workArea when it is at least the minimum size.
     return {
-        width: workArea.width >= MIN_WINDOW_WIDTH ? Math.min(fittedWidth, workArea.width) : fittedWidth,
+        width: workArea.width >= minWidth ? Math.min(fittedWidth, workArea.width) : fittedWidth,
         height: workArea.height >= MIN_WINDOW_HEIGHT ? Math.min(fittedHeight, workArea.height) : fittedHeight,
     };
 }
@@ -60,8 +69,9 @@ function fitRectToWorkArea(
     x: number | undefined,
     y: number | undefined,
     workArea: Rectangle,
+    minWidth: number,
 ): Rectangle {
-    const { width: fittedWidth, height: fittedHeight } = fitSizeToWorkArea(width, height, workArea);
+    const { width: fittedWidth, height: fittedHeight } = fitSizeToWorkArea(width, height, workArea, minWidth);
 
     const maxX = workArea.x + Math.max(0, workArea.width - fittedWidth);
     const maxY = workArea.y + Math.max(0, workArea.height - fittedHeight);
@@ -114,7 +124,11 @@ function findDisplayForPoint(displays: Display[], x: number, y: number): Display
  * Sanitize saved/live window bounds so the window is always a usable size
  * and visible on a connected display (preferring the remembered displayId).
  */
-export function sanitizeWindowBounds(input: WindowBoundsInput, displays: Display[]): SanitizedWindowBounds {
+export function sanitizeWindowBounds(
+    input: WindowBoundsInput,
+    displays: Display[],
+    minWidth = MIN_WINDOW_WIDTH,
+): SanitizedWindowBounds {
     const list = displays.length > 0 ? displays : [];
     let usedFallback = false;
 
@@ -123,7 +137,7 @@ export function sanitizeWindowBounds(input: WindowBoundsInput, displays: Display
     if (!isFiniteNumber(input.width) || !isFiniteNumber(input.height)) {
         usedFallback = true;
     }
-    width = Math.max(MIN_WINDOW_WIDTH, width);
+    width = Math.max(minWidth, width);
     height = Math.max(MIN_WINDOW_HEIGHT, height);
 
     const savedDisplayId = isFiniteNumber(input.displayId) ? input.displayId : undefined;
@@ -155,7 +169,7 @@ export function sanitizeWindowBounds(input: WindowBoundsInput, displays: Display
         };
     }
 
-    const fitted = fitRectToWorkArea(width, height, x, y, target.workArea);
+    const fitted = fitRectToWorkArea(width, height, x, y, target.workArea, minWidth);
 
     return {
         x: fitted.x,

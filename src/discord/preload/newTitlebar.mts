@@ -1,19 +1,24 @@
 const { ipcRenderer } = require("electron");
 
+import type { Settings } from "../../@types/settings.js";
 import { addStyle } from "../../common/dom.js";
 import { sleep } from "../../common/sleep.js";
+import { getWindowChrome } from "../../common/windowChrome.js";
 
-const windowStyle = ipcRenderer.sendSync("getConfig", "windowStyle") as string;
-const transparency = ipcRenderer.sendSync("getConfig", "transparency") as string;
+const mobileMode = ipcRenderer.sendSync("getConfig", "mobileMode") as Settings["mobileMode"];
+const windowStyle = ipcRenderer.sendSync("getConfig", "windowStyle") as Settings["windowStyle"];
+const transparency = ipcRenderer.sendSync("getConfig", "transparency") as Settings["transparency"];
 const os = ipcRenderer.sendSync("getOS") as string;
+const chrome = getWindowChrome({ mobileMode, windowStyle, transparency }, os);
 
-// Native + transparency on macOS uses overlay chrome (see createWindow / Legcord#1095).
-const usesOverlayChrome =
-    windowStyle === "default" ||
-    windowStyle === "overlay" ||
-    (windowStyle === "native" && os === "darwin" && transparency !== "none");
+if (mobileMode) {
+    document.addEventListener("DOMContentLoaded", () => {
+        document.documentElement.setAttribute("data-legcord-mobile", "true");
+        addStyle("legcord://assets/css/mobile.css");
+    });
+}
 
-if (usesOverlayChrome) {
+if (chrome.usesOverlayChrome) {
     document.addEventListener("DOMContentLoaded", () => {
         document.body.setAttribute("legcord-platform", os);
         addStyle("legcord://assets/css/baseTitlebar.css");

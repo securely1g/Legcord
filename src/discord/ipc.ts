@@ -47,6 +47,7 @@ import { getAppliedFlags, handleRestart } from "../main.js";
 import { isPowerSavingEnabled, setPowerSaving } from "../power.js";
 import constPaths from "../shared/consts/paths.js";
 import { splashWindow } from "../splash/main.js";
+import { registerDictationIpc } from "./dictation.js";
 import { refreshGlobalKeybinds } from "./globalKeybinds.js";
 import { getRuntimeEntries, getRuntimeScript, listPlugins, reloadPlugin, setPluginEnabled } from "./plugins/manager.js";
 import { processList, refreshProcessList } from "./rpcProcess.js";
@@ -114,6 +115,7 @@ function openChromeInternalsPage(url: "chrome://webrtc-internals/" | "chrome://g
 export function registerIpc(passedWindow: BrowserWindow): void {
     if (ipcRegistered) return;
     ipcRegistered = true;
+    registerDictationIpc(ipcMain, passedWindow, userDataPath);
     startThemeWatcher();
     ipcMain.handle("getShelterBundle", () => {
         return {
