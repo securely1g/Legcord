@@ -1,6 +1,6 @@
 # Build the Electron app first; see docs/omarchy-mobile.md.
 pkgname=legcord-mobile-git
-pkgver=1.3.1.omarchy.2
+pkgver=1.3.1.omarchy.3
 pkgrel=1
 pkgdesc='Legcord fork with a mobile layout and local voice dictation'
 arch=('x86_64')

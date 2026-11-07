@@ -93,11 +93,18 @@ html[data-legcord-mobile="true"] .legcord-dictation-mic {
     height: 44px;
     padding: 0;
     border: 0;
-    border-radius: 50%;
+    border-radius: 8px;
     color: var(--interactive-normal, #b5bac1);
     background: transparent;
     cursor: pointer;
     touch-action: manipulation;
+}
+
+@media (hover: hover) {
+    html[data-legcord-mobile="true"] .legcord-dictation-mic:not(:disabled):not([data-recording="true"]):hover {
+        color: var(--interactive-hover, #dbdee1);
+        background: var(--background-modifier-hover, rgb(255 255 255 / 8%));
+    }
 }
 
 html[data-legcord-mobile="true"] .legcord-dictation-mic:disabled {
@@ -112,6 +119,7 @@ html[data-legcord-mobile="true"] .legcord-dictation-actions button:focus-visible
 }
 
 html[data-legcord-mobile="true"] .legcord-dictation-mic[data-recording="true"] {
+    border-radius: 50%;
     color: white;
     background: #c93a45;
 }

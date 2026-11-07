@@ -1,6 +1,6 @@
 # Omarchy Mobile fork
 
-This branch builds Legcord 1.3.1-omarchy.2. It retains the existing `legcord`
+This branch builds Legcord 1.3.1-omarchy.3. It retains the existing `legcord`
 profile and login, and packages the application as `legcord-mobile-git` on Arch.
 Fork builds use manual updates so an upstream binary cannot replace the patch.
 

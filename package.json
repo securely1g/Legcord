@@ -1,6 +1,6 @@
 {
     "name": "legcord",
-    "version": "1.3.1-omarchy.2",
+    "version": "1.3.1-omarchy.3",
     "description": "Legcord is a custom client designed to enhance your Discord experience while keeping everything lightweight.",
     "main": "ts-out/main.js",
     "engines": {
