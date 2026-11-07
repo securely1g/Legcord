@@ -84,6 +84,11 @@
     }
 }
 
+/* Leave more room for message controls by hiding the chat's Apps button. */
+html[data-legcord-mobile="true"] [class*="channelTextArea_"] .app-launcher-entrypoint {
+    display: none;
+}
+
 /* Dictation remains usable when a mobile-mode window is widened. */
 html[data-legcord-mobile="true"] .legcord-dictation-mic {
     display: grid;

@@ -1,6 +1,6 @@
 # Omarchy Mobile fork
 
-This branch builds Legcord 1.3.1-omarchy.3. It retains the existing `legcord`
+This branch builds Legcord 1.3.1-omarchy.4. It retains the existing `legcord`
 profile and login, and packages the application as `legcord-mobile-git` on Arch.
 Fork builds use manual updates so an upstream binary cannot replace the patch.
 
@@ -15,6 +15,8 @@ windows, independently of Quick CSS. Windows can fit displays down to 320 logica
 pixels wide. Open navigation, select a server, then select a channel to return to
 full-width chat. This remains Discord's experimental mobile web interface, not
 the native Android/iOS app.
+
+Mobile mode hides the App Launcher button from the message composer.
 
 ## Local voice dictation
 
