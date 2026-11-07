@@ -4,6 +4,27 @@
  * Limited to narrow windows; desktop layout is unchanged.
  */
 @media (max-width: 600px) {
+    /* Discord mounts the sidebars when its mobile menu is open and removes them
+     * when a channel is selected. Give that view the entire viewport while open.
+     * Use a viewport length: a percentage creates a circular size in its subgrid.
+     */
+    html[data-legcord-mobile="true"]
+    [class*="base_"]:has(> [class*="content_"] > [class*="sidebar_"] > nav[class*="guilds_"]) {
+        --custom-guild-sidebar-width: 100vw;
+    }
+
+    html[data-legcord-mobile="true"]
+        [class*="content_"]:has(> [class*="sidebar_"] > nav[class*="guilds_"])
+        > [class*="page_"] {
+        display: none;
+    }
+
+    html[data-legcord-mobile="true"]
+        [class*="sidebar_"]:has(> nav[class*="guilds_"])
+        > [class*="sidebarResizeHandle_"] {
+        display: none;
+    }
+
     html[data-legcord-mobile="true"] [class*="messageContent_"] {
         font-size: 18px;
         line-height: 1.5;

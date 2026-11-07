@@ -1,6 +1,6 @@
 # Omarchy Mobile fork
 
-This branch builds Legcord 1.3.1-omarchy.4. It retains the existing `legcord`
+This branch builds Legcord 1.3.1-omarchy.5. It retains the existing `legcord`
 profile and login, and packages the application as `legcord-mobile-git` on Arch.
 Fork builds use manual updates so an upstream binary cannot replace the patch.
 
@@ -12,8 +12,10 @@ window style is preserved for when mobile mode is disabled.
 
 The bundled stylesheet increases message text and touch targets on narrow
 windows, independently of Quick CSS. Windows can fit displays down to 320 logical
-pixels wide. Open navigation, select a server, then select a channel to return to
-full-width chat. This remains Discord's experimental mobile web interface, not
+pixels wide. On narrow screens, navigation shows the server rail and channel
+sidebar across the window, with the chat panel hidden. Select a server, then a
+channel to open full-width chat; its menu button returns to navigation. Direct
+messages work the same way. This remains Discord's experimental mobile web interface, not
 the native Android/iOS app.
 
 Mobile mode hides the App Launcher button from the message composer.
