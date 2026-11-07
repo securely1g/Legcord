@@ -1,6 +1,6 @@
 # Omarchy Mobile fork
 
-This branch builds Legcord 1.3.1-omarchy.1. It retains the existing `legcord`
+This branch builds Legcord 1.3.1-omarchy.2. It retains the existing `legcord`
 profile and login, and packages the application as `legcord-mobile-git` on Arch.
 Fork builds use manual updates so an upstream binary cannot replace the patch.
 
@@ -18,9 +18,12 @@ the native Android/iOS app.
 
 ## Local voice dictation
 
-In a channel with an empty message box, tap the microphone, speak, then choose
-**Stop & Send**. The recording is transcribed locally and its text is sent to the
-same channel automatically. Cancel discards the recording. If the channel or
+In a channel with an empty message box, tap the microphone and speak. A live
+transcript appears in the recording panel and updates as you continue. Updates
+arrive after a short processing delay and may revise earlier words; they are
+previews and do not change the message box or send messages. Choose **Stop & Send**
+to finish recognition of the entire recording and send its text to the same
+channel automatically. Cancel discards the recording and its preview. If the channel or
 draft changes, automatic sending is blocked and the transcript is retained for
 recovery. Recordings are limited to 60 seconds.
 
@@ -40,6 +43,8 @@ bash packaging/install-dictation-model.sh
 The model is about 142 MiB. The installer uses the default Linux Legcord profile;
 custom profile locations require placing the model in that profile manually.
 The VM viewer must have access to the host microphone for live speech input.
+The local VM launcher follows the host's selected microphone, including a
+Bluetooth headset, when its `microphone-source` setting is `auto`.
 
 ## Build and package
 
@@ -71,7 +76,8 @@ backed up and removed when deploying this build to avoid duplicate styling.
 ## Validation scope
 
 Regression coverage includes mobile window policy, narrow display bounds,
-dictation input/origin limits, cancellation, and guarded sending with a fake
-composer. Validate microphone/stop/cancel states and the final layout in the VM.
+dictation input/origin limits, serial preview jobs, cancellation, and guarded
+sending with a fake composer. Validate live preview/microphone/stop/cancel states
+and the final layout in the VM.
 Use a local test composer for automatic-send tests so testing does not post into
 real conversations. Windows/macOS dictation is not implemented in this fork.

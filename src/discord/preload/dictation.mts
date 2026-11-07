@@ -1,4 +1,5 @@
 import { sendDictationTranscript } from "../../common/dictationSend.js";
+import { DictationTranscriber } from "../../common/dictationTranscriber.js";
 
 const { ipcRenderer } = require("electron");
 
@@ -15,6 +16,8 @@ type Capture = {
     chunks: Blob[];
     bytes: number;
     started: number;
+    nextPreviewAt: number;
+    previewUnavailable?: boolean;
     stream?: MediaStream;
     recorder?: MediaRecorder;
     timer?: ReturnType<typeof setTimeout>;
@@ -41,6 +44,10 @@ async function installDictation() {
     let message = "Checking local speech recognition…";
     let transcript = "";
     let noticeTimer: ReturnType<typeof setTimeout> | undefined;
+    const transcriber = new DictationTranscriber<TranscriptResult>(
+        (audio) => ipcRenderer.invoke("dictation-transcribe", audio),
+        () => ipcRenderer.invoke("dictation-cancel"),
+    );
 
     const mic = document.createElement("button");
     mic.type = "button";
@@ -148,7 +155,7 @@ async function installDictation() {
             previous.chunks.length = 0;
             delete previous.audio;
         }
-        if (phase === "transcribing") void ipcRenderer.invoke("dictation-cancel").catch(() => {});
+        void transcriber.cancelAndWait();
         phase = "idle";
         message = "";
         transcript = "";
@@ -180,14 +187,20 @@ async function installDictation() {
                 ? "Stop recording, transcribe and send"
                 : textarea && (textarea.value !== "" || hasDraftContext(textarea))
                   ? "Clear your draft, attachments and reply before recording"
-                  : "Record a message, then stop to transcribe and send";
+                  : "See your words as you speak, then stop to send";
         mic.title = !available ? message : label;
         mic.setAttribute("aria-label", mic.title);
         mic.setAttribute("aria-pressed", String(phase === "recording"));
         panel.hidden = phase === "idle";
         const text =
             phase === "recording" && current
-                ? `Recording ${Math.floor((Date.now() - current.started) / 1000)}s / ${maxDuration}s. Stop to transcribe and send.`
+                ? `Recording ${Math.floor((Date.now() - current.started) / 1000)}s / ${maxDuration}s. ${
+                      current.previewUnavailable
+                          ? "Live preview unavailable. Stop to transcribe and send."
+                          : transcript
+                            ? "Live preview; words may change. Stop to send."
+                            : "Listening… Text appears as you speak. Stop to send."
+                  }`
                 : message;
         if (status.textContent !== text) status.textContent = text;
         preview.hidden = !transcript;
@@ -258,6 +271,7 @@ async function installDictation() {
             chunks: [],
             bytes: 0,
             started: Date.now(),
+            nextPreviewAt: Date.now() + 3000,
         };
         current = capture;
         phase = "requesting";
@@ -282,7 +296,10 @@ async function installDictation() {
                 if (capture.bytes > maxBytes) {
                     cancelCapture();
                     fail("Recording is too large. Try a shorter message.");
-                } else capture.chunks.push(event.data);
+                } else {
+                    capture.chunks.push(event.data);
+                    updatePreview(capture, mimeType);
+                }
             });
             recorder.addEventListener("error", () => {
                 if (current !== capture) return;
@@ -302,6 +319,7 @@ async function installDictation() {
             });
             recorder.start(1000);
             capture.started = Date.now();
+            capture.nextPreviewAt = capture.started + 3000;
             capture.timer = setTimeout(() => finishRecording(), maxDuration * 1000);
             phase = "recording";
             render();
@@ -316,10 +334,35 @@ async function installDictation() {
         }
     }
 
+    function updatePreview(capture: Capture, mimeType: string) {
+        if (phase !== "recording" || current !== capture || Date.now() < capture.nextPreviewAt) return;
+        const pending = transcriber.tryTranscribe(() => new Blob(capture.chunks, { type: mimeType }).arrayBuffer());
+        if (!pending) return;
+        capture.nextPreviewAt = Date.now() + 3000;
+        void pending.then(
+            (result) => {
+                if (!result || current !== capture || phase !== "recording") return;
+                if (result.ok) {
+                    const text = result.text.trim();
+                    if (text) transcript = text;
+                    capture.previewUnavailable = false;
+                } else if (result.error !== "NO_SPEECH") {
+                    capture.previewUnavailable = true;
+                }
+                render();
+            },
+            () => {
+                if (current !== capture || phase !== "recording") return;
+                capture.previewUnavailable = true;
+                render();
+            },
+        );
+    }
+
     function finishRecording() {
         if (phase !== "recording" || !current?.recorder) return;
         phase = "transcribing";
-        message = "Transcribing on this device…";
+        message = "Finishing transcription on this device…";
         current.recorder.stop();
         cleanMedia(current);
         render();
@@ -328,11 +371,15 @@ async function installDictation() {
     async function transcribe(capture: Capture) {
         if (current !== capture || !capture.audio) return;
         phase = "transcribing";
-        message = "Transcribing on this device…";
+        message = "Finishing transcription on this device…";
         render();
+        let finalTranscriptReady = false;
         try {
-            const result = (await ipcRenderer.invoke("dictation-transcribe", capture.audio)) as TranscriptResult;
-            if (current !== capture) return;
+            await transcriber.cancelAndWait();
+            if (current !== capture || !capture.audio) return;
+            const audio = capture.audio;
+            const result = await transcriber.tryTranscribe(() => Promise.resolve(audio));
+            if (!result || current !== capture) return;
             if (!result.ok) {
                 fail(result.message || "Transcription failed. Try again.");
                 return;
@@ -342,6 +389,7 @@ async function installDictation() {
                 fail("No speech was detected. Try recording again.");
                 return;
             }
+            finalTranscriptReady = true;
             const resultState = await sendDictationTranscript(
                 {
                     isCurrentTarget: () => sameTarget(capture),
@@ -391,7 +439,7 @@ async function installDictation() {
         } catch {
             if (current === capture) {
                 fail(
-                    transcript
+                    finalTranscriptReady
                         ? "Sending failed. Your transcript is kept here; you can copy it."
                         : "Transcription failed. Retry, or record a new message.",
                 );
