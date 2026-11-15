@@ -28,6 +28,7 @@ import {
 } from "../common/config.js";
 import { addDetectable, getDetectables, removeDetectable } from "../common/detectables.js";
 import { getLang, getLangName, getRawLang, setLang } from "../common/lang.js";
+import { getManagedSettingsPolicy } from "../common/managedExternalUrlPolicy.js";
 import {
     disableQuickCss,
     getCachedThemeList,
@@ -86,6 +87,7 @@ let ipcRegistered = false;
 const chromeInternalsWindows = new Map<string, BrowserWindow>();
 
 function openChromeInternalsPage(url: "chrome://webrtc-internals/" | "chrome://gpu/", title: string): void {
+    if (getManagedSettingsPolicy().managed) return;
     const existing = chromeInternalsWindows.get(url);
     if (existing && !existing.isDestroyed()) {
         if (existing.isMinimized()) existing.restore();
@@ -120,7 +122,11 @@ export function registerIpc(passedWindow: BrowserWindow): void {
     startThemeWatcher();
     ipcMain.handle("getShelterBundle", () => {
         return {
-            js: ifExistsRead(path.join(app.getPath("userData"), "shelter.js")),
+            js: ifExistsRead(
+                getManagedSettingsPolicy().managed
+                    ? path.join(app.getAppPath(), "assets", "vendor", "shelter.js")
+                    : path.join(app.getPath("userData"), "shelter.js"),
+            ),
             enabled: true,
         };
     });
@@ -149,14 +155,17 @@ export function registerIpc(passedWindow: BrowserWindow): void {
 
     // theming
     ipcMain.on("enableQuickCss", () => {
+        if (getManagedSettingsPolicy().managed) return;
         console.log("Enabling quick CSS");
         initQuickCss(passedWindow);
     });
     ipcMain.on("disableQuickCss", () => {
+        if (getManagedSettingsPolicy().managed) return;
         console.log("Disabling quick CSS");
         disableQuickCss(passedWindow);
     });
     ipcMain.on("openQuickCss", () => {
+        if (getManagedSettingsPolicy().managed) return;
         if (getConfig("useSystemCssEditor")) {
             void shell.openPath(quickCssPath);
         } else {
@@ -164,14 +173,17 @@ export function registerIpc(passedWindow: BrowserWindow): void {
         }
     });
     ipcMain.on("importQuickCss", (_event, css: string) => {
+        if (getManagedSettingsPolicy().managed) return;
         let currentCss = readFileSync(quickCssPath, "utf-8");
         currentCss += `\n/* Imported CSS */\n${css}`;
         writeFileSync(quickCssPath, currentCss, "utf-8");
     });
     ipcMain.on("openThemesFolder", () => {
+        if (getManagedSettingsPolicy().managed) return;
         shell.showItemInFolder(themesPath);
     });
     ipcMain.on("openImportPicker", () => {
+        if (getManagedSettingsPolicy().managed) return;
         dialog
             .showOpenDialog({
                 title: getLang("dialog-importTheme-title"),
@@ -199,10 +211,12 @@ export function registerIpc(passedWindow: BrowserWindow): void {
             });
     });
     ipcMain.on("setThemeEnabled", (_event, name: string, enabled: boolean) => {
+        if (getManagedSettingsPolicy().managed) return;
         if (typeof name !== "string" || !resolveThemeDir(name)) return;
         setThemeEnabled(name, Boolean(enabled));
     });
     ipcMain.on("editTheme", (_event, id: string) => {
+        if (getManagedSettingsPolicy().managed) return;
         const themeDir = resolveThemeDir(id);
         if (!themeDir) return;
         const manifestPath = path.join(themeDir, "manifest.json");
@@ -217,16 +231,19 @@ export function registerIpc(passedWindow: BrowserWindow): void {
         }
     });
     ipcMain.on("openThemeFolder", (_event, id: string) => {
+        if (getManagedSettingsPolicy().managed) return;
         const themeDir = resolveThemeDir(id);
         if (!themeDir) return;
         void shell.openPath(themeDir);
     });
     ipcMain.on("uninstallTheme", (_event, id: string) => {
+        if (getManagedSettingsPolicy().managed) return;
         if (!resolveThemeDir(id) && !resolveThemeDir(`${id}-BD`)) return;
         uninstallTheme(id);
     });
 
     ipcMain.handle("installBDTheme", async (_event, link: string) => {
+        if (getManagedSettingsPolicy().managed) return;
         if (typeof link !== "string" || (!link.startsWith("https://") && !link.startsWith("http://"))) return;
         await installTheme(link);
     });
@@ -244,6 +261,7 @@ export function registerIpc(passedWindow: BrowserWindow): void {
         applyStartupWindowVisibility(passedWindow);
     });
     ipcMain.on("setLang", (_event, lang: string) => {
+        if (getManagedSettingsPolicy().managed) return;
         setLang(lang);
     });
     ipcMain.on("setVoiceTouchbar", (_event, state: boolean) => {
@@ -254,6 +272,7 @@ export function registerIpc(passedWindow: BrowserWindow): void {
         }
     });
     ipcMain.on("importGuilds", (_event, array: Array<string>) => {
+        if (getManagedSettingsPolicy().managed) return;
         importGuilds(array);
     });
     ipcMain.on("setVoiceState", (_event, mute: boolean, deafen: boolean) => {
@@ -267,6 +286,7 @@ export function registerIpc(passedWindow: BrowserWindow): void {
     });
 
     ipcMain.on("setPowerSaving", (_event, state: boolean) => {
+        if (getManagedSettingsPolicy().managed) return;
         setPowerSaving(state);
     });
     ipcMain.on("isPowerSavingEnabled", (event) => {
@@ -316,6 +336,10 @@ export function registerIpc(passedWindow: BrowserWindow): void {
         event.returnValue = flags;
     });
     ipcMain.on("setConfig", (event, key: keyof Settings, value: Settings[keyof Settings]) => {
+        if (getManagedSettingsPolicy().managed) {
+            event.returnValue = undefined;
+            return;
+        }
         if (!isIpcWritableSettingsKey(key)) {
             console.warn(`[IPC] Rejected setConfig for key: ${String(key)}`);
             event.returnValue = undefined;
@@ -331,20 +355,30 @@ export function registerIpc(passedWindow: BrowserWindow): void {
         event.returnValue = getBlacklist();
     });
     ipcMain.on("blacklistGame", (event, name: string, id: number) => {
+        if (getManagedSettingsPolicy().managed) {
+            event.returnValue = undefined;
+            return;
+        }
         blacklistGameAdd(name, id);
         event.returnValue = undefined;
     });
     ipcMain.on("unblacklistGame", (event, id: number) => {
+        if (getManagedSettingsPolicy().managed) {
+            event.returnValue = undefined;
+            return;
+        }
         blacklistGameRemove(id);
         event.returnValue = undefined;
     });
     ipcMain.on("addKeybind", (_event, keybind: Keybind) => {
+        if (getManagedSettingsPolicy().managed) return;
         const keybinds = getConfig("keybinds");
         keybinds.push(keybind);
         setConfig("keybinds", keybinds);
         refreshGlobalKeybinds();
     });
     ipcMain.on("toggleKeybind", (_event, id: string) => {
+        if (getManagedSettingsPolicy().managed) return;
         const keybinds = getConfig("keybinds");
         const keybind = keybinds[keybinds.findIndex((x) => x.id === id)];
         keybind.enabled = !keybind.enabled;
@@ -352,6 +386,7 @@ export function registerIpc(passedWindow: BrowserWindow): void {
         refreshGlobalKeybinds();
     });
     ipcMain.on("removeKeybind", (_event, id: string) => {
+        if (getManagedSettingsPolicy().managed) return;
         const keybinds = getConfig("keybinds");
         keybinds.splice(
             keybinds.findIndex((x) => x.id === id),
@@ -370,6 +405,7 @@ export function registerIpc(passedWindow: BrowserWindow): void {
         event.returnValue = getConfig(arg);
     });
     ipcMain.on("saveSettings", (_event, args: Settings) => {
+        if (getManagedSettingsPolicy().managed) return;
         if (!args || typeof args !== "object") return;
         const writable = Object.fromEntries(
             Object.entries(args).filter(([key]) => isIpcWritableSettingsKey(key)),
@@ -379,24 +415,26 @@ export function registerIpc(passedWindow: BrowserWindow): void {
         notifyExternalUrlPolicyChanged();
     });
     ipcMain.on("openStorageFolder", () => {
+        if (getManagedSettingsPolicy().managed) return;
         shell.showItemInFolder(storagePath);
     });
-    ipcMain.on("openThemesFolder", () => {
-        shell.showItemInFolder(themesPath);
-    });
     ipcMain.on("openPluginsFolder", () => {
+        if (getManagedSettingsPolicy().managed) return;
         shell.showItemInFolder(extensionsPath);
     });
     ipcMain.on("openRuntimePluginsFolder", () => {
+        if (getManagedSettingsPolicy().managed) return;
         shell.showItemInFolder(pluginsPath);
     });
     ipcMain.on("openCrashesFolder", () => {
+        if (getManagedSettingsPolicy().managed) return;
         shell.showItemInFolder(path.join(app.getPath("temp"), `${app.getName()} Crashes`));
     });
     ipcMain.on("getLangName", (event) => {
         event.returnValue = getLangName();
     });
     ipcMain.on("crash", () => {
+        if (getManagedSettingsPolicy().managed) return;
         process.crash();
     });
     ipcMain.on("getOS", (event) => {
@@ -423,6 +461,7 @@ export function registerIpc(passedWindow: BrowserWindow): void {
         openChromeInternalsPage("chrome://gpu/", "GPU");
     });
     ipcMain.on("openCustomIconDialog", () => {
+        if (getManagedSettingsPolicy().managed) return;
         dialog
             .showOpenDialog({
                 properties: ["openFile"],
@@ -447,12 +486,14 @@ export function registerIpc(passedWindow: BrowserWindow): void {
     });
     ipcMain.handle("plugins:list", () => listPlugins());
     ipcMain.handle("plugins:set-enabled", async (_event, pluginId: string, enabled: boolean) => {
+        if (getManagedSettingsPolicy().managed) return { ok: false, error: "PARENT_MANAGED" };
         if (typeof pluginId !== "string" || typeof enabled !== "boolean") {
             return { ok: false };
         }
         return { ok: await setPluginEnabled(pluginId, enabled) };
     });
     ipcMain.handle("plugins:reload", async (_event, pluginId: string) => {
+        if (getManagedSettingsPolicy().managed) return { ok: false, error: "PARENT_MANAGED" };
         if (typeof pluginId !== "string") return { ok: false };
         return { ok: await reloadPlugin(pluginId) };
     });
@@ -467,15 +508,18 @@ export function registerIpc(passedWindow: BrowserWindow): void {
 
     // custom detectables control
     ipcMain.on("refreshProcessList", () => {
+        if (getManagedSettingsPolicy().managed) return;
         refreshProcessList();
     });
     ipcMain.on("getDetectables", (event) => {
         event.returnValue = getDetectables();
     });
     ipcMain.on("addDetectable", (_event, game: Game) => {
+        if (getManagedSettingsPolicy().managed) return;
         addDetectable(game);
     });
     ipcMain.on("removeDetectable", (_event, id: string) => {
+        if (getManagedSettingsPolicy().managed) return;
         removeDetectable(id);
     });
 
@@ -488,6 +532,7 @@ export function registerIpc(passedWindow: BrowserWindow): void {
             relativePath: string,
             data: string,
         ): Promise<{ ok: true } | { ok: false; error: string }> => {
+            if (getManagedSettingsPolicy().managed) return { ok: false, error: "PARENT_MANAGED" };
             if (!getConfig("extendedPluginAbilities")) {
                 return { ok: false, error: "EXTENSION_DISABLED" };
             }
@@ -539,6 +584,7 @@ export function registerIpc(passedWindow: BrowserWindow): void {
     ipcMain.handle(
         "backupSave",
         async (_event, payloadStr: unknown): Promise<{ ok: true } | { ok: false; error: string }> => {
+            if (getManagedSettingsPolicy().managed) return { ok: false, error: "PARENT_MANAGED" };
             try {
                 if (typeof payloadStr !== "string") return { ok: false, error: "INVALID_ARGS" };
                 const payload = JSON.parse(payloadStr) as BackupSavePayload;
@@ -575,6 +621,7 @@ export function registerIpc(passedWindow: BrowserWindow): void {
     );
 
     ipcMain.handle("backupRestore", async (): Promise<string> => {
+        if (getManagedSettingsPolicy().managed) return JSON.stringify({ ok: false, error: "PARENT_MANAGED" });
         try {
             const result = await dialog.showOpenDialog({
                 title: getLang("backup-dialogOpen-title"),

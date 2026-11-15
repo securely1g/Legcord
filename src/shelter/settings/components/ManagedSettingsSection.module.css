@@ -1,0 +1,14 @@
+.notice {
+    padding: 16px;
+    margin-bottom: 20px;
+    border: 1px solid var(--border-subtle, var(--background-modifier-accent));
+    border-radius: 8px;
+    color: var(--text-normal);
+    background: var(--background-surface-higher, var(--background-secondary));
+}
+
+.notice p {
+    margin: 8px 0 0;
+    color: var(--text-muted);
+    line-height: 1.4;
+}

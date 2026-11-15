@@ -16,6 +16,7 @@ import { navigateTo } from "../common/dom.js";
 import { forceQuit, setForceQuit } from "../common/forceQuit.js";
 import { handleCommands, passedValidArgument } from "../common/handleCommands.js";
 import { getLang } from "../common/lang.js";
+import { getManagedSettingsPolicy } from "../common/managedExternalUrlPolicy.js";
 import { isDiscordIcsBlobUrl, isDiscordPopoutUrl, isYouTubeEmbedOrProxyFrame } from "../common/sanitization.js";
 import { injectThemesMain } from "../common/themes.js";
 import {
@@ -436,6 +437,7 @@ export function createWindow() {
             sandbox: true,
             nodeIntegration: false,
             contextIsolation: true,
+            devTools: !getManagedSettingsPolicy().managed,
             backgroundThrottling: getConfig("sleepInBackground"),
             preload: path.join(import.meta.dirname, "discord/preload.mjs"),
             spellcheck: getConfig("spellcheck"),

@@ -2,6 +2,7 @@ import { unlink } from "node:fs";
 import { join } from "node:path";
 import { app, Menu, nativeImage, Tray } from "electron";
 import { getConfigLocation } from "../common/config.js";
+import { getManagedSettingsPolicy } from "../common/managedExternalUrlPolicy.js";
 
 export let tray: Tray;
 const trayIcon = "ac_plug_colored";
@@ -30,6 +31,10 @@ void app.whenReady().then(() => {
         {
             label: "Quit Legcord",
             click() {
+                if (getManagedSettingsPolicy().managed) {
+                    app.quit();
+                    return;
+                }
                 unlink(getConfigLocation(), (err) => {
                     if (err) throw err;
 

@@ -1,11 +1,14 @@
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
-import { platform } from "node:os";
 import { dirname, join } from "node:path";
 import { app, dialog } from "electron";
 import type { Settings } from "../@types/settings.js";
 import { normalizeAllowedDomains } from "./externalUrlPolicy.js";
 import { getLang } from "./lang.js";
-import { getManagedExternalUrlPolicy } from "./managedExternalUrlPolicy.js";
+import { getManagedExternalUrlPolicy, getManagedSettingsPolicy } from "./managedExternalUrlPolicy.js";
+import { defaults, SETTINGS_KEYS } from "./settingsDefaults.js";
+
+export { SETTINGS_KEYS } from "./settingsDefaults.js";
+
 import { sanitizeAdditionalArguments } from "./sanitization.js";
 import { getWindowStateLocation } from "./windowState.js";
 export let firstRun: boolean;
@@ -32,77 +35,6 @@ function ensureConfigCache(): Settings {
     return configCache;
 }
 
-const defaults: Settings = {
-    windowStyle: "overlay",
-    channel: "stable",
-    bounceOnPing: false,
-    csp: "none",
-    minimizeToTray: true,
-    processScanning: true,
-    windowsLegacyScanning: false,
-    scanInterval: 5000,
-    overlayButtonColor: "#121214",
-    keybinds: [],
-    audio: {
-        workaround: false,
-        deviceSelect: true,
-        granularSelect: true,
-        ignoreVirtual: false,
-        ignoreDevices: false,
-        ignoreInputMedia: false,
-        onlySpeakers: false,
-        onlyDefaultSpeakers: true,
-        loopbackType: "loopback",
-    },
-    multiInstance: false,
-    mods: [],
-    transparency: "none",
-    windowMaterial: "mica",
-    spellcheck: true,
-    hardwareAcceleration: true,
-    sdpH264BaselineRewrite: true,
-    performanceMode: "none",
-    skipSplash: false,
-    inviteWebsocket: true,
-    startMinimized: "off",
-    disableHttpCache: false,
-    customJsBundle: "https://legcord.app/placeholder.js",
-    customCssBundle: "https://legcord.app/placeholder.css",
-    disableAutogain: false,
-    autoHideMenuBar: true,
-    blockPowerSavingInVoiceChat: false,
-    useMacSystemPicker: false,
-    mobileMode: false,
-    externalUrlAllowlistEnabled: true,
-    externalUrlAllowlist: [],
-    tray: "dynamic",
-    doneSetup: false,
-    popoutPiP: false,
-    vaapi: platform() === "linux",
-    spellcheckLanguage: ["en-US"],
-    sleepInBackground: false,
-    noBundleUpdates: [],
-    automaticUpdates: false,
-    additionalArguments: "",
-    disableDangerousSwitchBlocking: false,
-    proxyMode: "system",
-    proxyRules: "",
-    proxyBypassRules: "<local>",
-    proxyPacScript: "",
-    customIcon: join(import.meta.dirname, "../", "/assets/desktop.png"),
-    smoothScroll: true,
-    autoScroll: false,
-    useSystemCssEditor: false,
-    extendedPluginAbilities: false,
-    quickCss: true,
-    supportBannerDismissed: false,
-    showExperimentalPluginMenu: false,
-    pluginStates: {},
-};
-
-/** Known Settings keys (from defaults). Used to reject arbitrary IPC config writes. */
-export const SETTINGS_KEYS = new Set<string>(Object.keys(defaults));
-
 /** Keys that exist in Settings but must not be writable from renderer IPC. */
 const IPC_BLOCKED_SETTINGS_KEYS = new Set<keyof Settings>(["disableDangerousSwitchBlocking"]);
 
@@ -111,11 +43,20 @@ function isExternalUrlSetting(key: unknown): boolean {
 }
 
 function isManagedPolicyMetadata(key: unknown): boolean {
-    return key === "externalUrlPolicyManaged" || key === "externalUrlPolicyInvalid";
+    return (
+        key === "externalUrlPolicyManaged" ||
+        key === "externalUrlPolicyInvalid" ||
+        key === "settingsPolicyManaged" ||
+        key === "settingsPolicyInvalid"
+    );
 }
 
 function isLockedManagedSetting(key: unknown): boolean {
-    return isManagedPolicyMetadata(key) || (isExternalUrlSetting(key) && getManagedExternalUrlPolicy().managed);
+    return (
+        getManagedSettingsPolicy().managed ||
+        isManagedPolicyMetadata(key) ||
+        (isExternalUrlSetting(key) && getManagedExternalUrlPolicy().managed)
+    );
 }
 
 export function isValidSettingsKey(key: unknown): key is keyof Settings {
@@ -158,23 +99,43 @@ export function getConfigLocation(): string {
 }
 export function getEntireConfig(): Settings {
     const policy = getManagedExternalUrlPolicy();
+    const settingsPolicy = getManagedSettingsPolicy();
     return {
-        ...ensureConfigCache(),
+        ...(settingsPolicy.managed ? getManagedConfig() : ensureConfigCache()),
         externalUrlAllowlistEnabled: getConfig("externalUrlAllowlistEnabled"),
         externalUrlAllowlist: [...(getConfig("externalUrlAllowlist") ?? [])],
         externalUrlPolicyManaged: policy.managed,
         externalUrlPolicyInvalid: policy.invalid,
+        settingsPolicyManaged: settingsPolicy.managed,
+        settingsPolicyInvalid: settingsPolicy.invalid,
     };
+}
+
+/** User-profile values and CLI modes never override an administrator snapshot. */
+function getManagedConfig(): Settings {
+    return structuredClone({
+        ...defaults,
+        mobileMode: true,
+        doneSetup: true,
+        quickCss: false,
+        inviteWebsocket: false,
+        processScanning: false,
+        ...getManagedSettingsPolicy().settings,
+    }) as Settings;
 }
 
 export function getConfig<K extends keyof Settings>(object: K): Settings[K] {
     const policy = getManagedExternalUrlPolicy();
     if (object === "externalUrlPolicyManaged") return policy.managed as Settings[K];
     if (object === "externalUrlPolicyInvalid") return policy.invalid as Settings[K];
+    const settingsPolicy = getManagedSettingsPolicy();
+    if (object === "settingsPolicyManaged") return settingsPolicy.managed as Settings[K];
+    if (object === "settingsPolicyInvalid") return settingsPolicy.invalid as Settings[K];
     if (policy.managed) {
         if (object === "externalUrlAllowlistEnabled") return policy.enabled as Settings[K];
         if (object === "externalUrlAllowlist") return [...policy.domains] as Settings[K];
     }
+    if (settingsPolicy.managed) return getManagedConfig()[object];
     if (process.argv.includes("--safe-mode")) {
         return safeMode[object];
     }
@@ -186,8 +147,10 @@ const START_MINIMIZED_MODES = new Set<Settings["startMinimized"]>(["off", "minim
 
 /** Effective startup window mode (CLI overrides are session-only). */
 export function getStartMinimizedMode(): Settings["startMinimized"] {
-    if (process.argv.includes("--start-in-tray")) return "tray";
-    if (process.argv.includes("--start-minimized")) return "minimized";
+    if (!getManagedSettingsPolicy().managed) {
+        if (process.argv.includes("--start-in-tray")) return "tray";
+        if (process.argv.includes("--start-minimized")) return "minimized";
+    }
     const mode = getConfig("startMinimized");
     return START_MINIMIZED_MODES.has(mode) ? mode : "off";
 }
@@ -224,6 +187,7 @@ export function setConfig<K extends keyof Settings>(object: K, toSet: Settings[K
     writeFileSync(getConfigLocation(), toSave, "utf-8");
 }
 export function setConfigBulk(object: Settings): void {
+    if (getManagedSettingsPolicy().managed) return;
     const existingData = configCache ?? ({} as Settings);
     const sanitizedEntries = Object.fromEntries(
         Object.entries(object)
@@ -247,6 +211,13 @@ export function checkIfConfigExists(): void {
         mkdirSync(app.getPath("userData"));
         console.log("Created missing user data folder");
     }
+    // A managed device has already been provisioned by its administrator.
+    // A missing or edited daily profile must not reopen onboarding.
+    if (getManagedSettingsPolicy().managed) {
+        if (!existsSync(storagePath)) mkdirSync(storagePath, { recursive: true });
+        firstRun = false;
+        return;
+    }
 
     try {
         if (!existsSync(settingsFile)) {
@@ -269,6 +240,11 @@ export function checkIfConfigExists(): void {
     }
 }
 export function checkIfConfigIsBroken(): void {
+    if (getManagedSettingsPolicy().managed) {
+        checkWindowStateIntegrity();
+        handleAutomaticUpdates(getEntireConfig());
+        return;
+    }
     try {
         const settingsObject = ensureConfigCache() as Settings & Record<string, unknown>;
 
@@ -310,6 +286,11 @@ export function checkIfConfigIsBroken(): void {
         setup();
         dialog.showErrorBox(getLang("config-corrupted-title"), getLang("config-corrupted-message"));
     }
+    checkWindowStateIntegrity();
+    handleAutomaticUpdates(configCache!);
+}
+
+function checkWindowStateIntegrity(): void {
     try {
         const windowData = readFileSync(getWindowStateLocation(), "utf-8");
         JSON.parse(windowData);
@@ -319,7 +300,6 @@ export function checkIfConfigIsBroken(): void {
         writeFileSync(getWindowStateLocation(), "{}", "utf-8");
         console.log("Detected a corrupted window config");
     }
-    handleAutomaticUpdates(configCache!);
 }
 
 export function setup(): void {

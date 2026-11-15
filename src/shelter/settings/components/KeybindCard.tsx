@@ -1,6 +1,6 @@
 import { createSignal } from "solid-js";
 import type { Keybind } from "../../../@types/keybind.js";
-import { refreshSettings } from "../settings.js";
+import { isSettingsManaged, refreshSettings } from "../settings.js";
 import classes from "./KeybindCard.module.css";
 
 const {
@@ -12,12 +12,14 @@ export const KeybindCard = (props: { keybind: Keybind }) => {
     const [switchState, setSwitchState] = createSignal(props.keybind.enabled);
 
     function toggleKeybind(state: boolean) {
+        if (isSettingsManaged()) return;
         setSwitchState(state);
         window.legcord.settings.toggleKeybind(props.keybind.id);
         refreshSettings();
         console.log(store.settings.keybinds);
     }
     function removeKeybind() {
+        if (isSettingsManaged()) return;
         window.legcord.settings.removeKeybind(props.keybind.id);
         refreshSettings();
         console.log(store.settings.keybinds);

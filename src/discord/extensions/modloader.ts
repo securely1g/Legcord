@@ -5,6 +5,7 @@ import type { RepoData } from "../../@types/consts.js";
 import type { Settings, ValidMods } from "../../@types/settings.js";
 import { getConfig, setConfig } from "../../common/config.js";
 import { modData } from "../../common/consts.js";
+import { getManagedSettingsPolicy } from "../../common/managedExternalUrlPolicy.js";
 
 async function fetchMod(fileName: string, url: string) {
     try {
@@ -69,6 +70,9 @@ async function cacheCheck(mod: ValidMods) {
 }
 
 export async function fetchMods() {
+    // Managed devices use the pinned package runtime, never profile caches or
+    // startup downloads that a daily user can replace.
+    if (getManagedSettingsPolicy().managed) return;
     if (typeof getConfig("mods") === "string") {
         setConfig("mods", [getConfig("mods") as unknown as ValidMods]); // pre 3.3.2
     }

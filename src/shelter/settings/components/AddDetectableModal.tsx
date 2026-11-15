@@ -1,6 +1,6 @@
 import type { Game } from "arrpc";
 import { createSignal } from "solid-js";
-import { setRestartRequired } from "../settings.js";
+import { isSettingsManaged, setRestartRequired } from "../settings.js";
 import classes from "./AddDetectableModal.module.css";
 
 const {
@@ -31,6 +31,7 @@ export const AddDetectableModal = (props: { close: () => void; executable: strin
     const [enabled, setEnabled] = createSignal(true);
 
     function save() {
+        if (isSettingsManaged()) return;
         if (!appName().trim() || !appId().trim() || !props.executable) {
             return showToast({
                 title: store.i18n["detectable-missingFields"],

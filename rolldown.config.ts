@@ -36,6 +36,7 @@ export default defineConfig([
                     { src: "src/**/**/*.js", dest: "ts-out/js/" },
                     { src: "package.json", dest: "ts-out/" },
                     { src: "assets/**/**", dest: "ts-out/assets/" },
+                    { src: "assets/vendor/*", dest: "ts-out/assets/vendor/" },
                     // Monaco AMD tree for the offline Quick CSS editor (next to editor.html)
                     { src: "node_modules/monaco-editor/min/vs/**/*", dest: "ts-out/html/monaco/vs" },
                 ],

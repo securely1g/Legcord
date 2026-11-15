@@ -27,7 +27,7 @@ if (!options.missingProfile) {
 }
 if (options.safeMode) process.argv.push("--safe-mode");
 const electron = `export const app={getPath:key=>key==='exe'?'/usr/bin/legcord':${JSON.stringify(directory)},setPath:()=>{}};export const dialog={showErrorBox:()=>{throw new Error('Unexpected config reset')}};`;
-const policy = `const domains=Object.freeze(${JSON.stringify(options.domains)});const policy=Object.freeze({managed:${options.managed},enabled:${options.enabled},domains,invalid:${options.invalid}});export const getManagedExternalUrlPolicy=()=>policy;`;
+const policy = `const domains=Object.freeze(${JSON.stringify(options.domains)});const policy=Object.freeze({managed:${options.managed},enabled:${options.enabled},domains,invalid:${options.invalid}});export const getManagedExternalUrlPolicy=()=>policy;export const getManagedSettingsPolicy=()=>({managed:false,invalid:false,settings:{},language:'en-US'});`;
 registerHooks({
     resolve(specifier, context, nextResolve) {
         let source;

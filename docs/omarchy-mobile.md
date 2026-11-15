@@ -1,6 +1,6 @@
 # Omarchy Mobile fork
 
-This branch builds Legcord 1.3.1-omarchy.7. It retains the existing `legcord`
+This branch builds Legcord 1.3.1-omarchy.8. It retains the existing `legcord`
 profile and login, and packages the application as `legcord-mobile-git` on Arch.
 Fork builds use manual updates so an upstream binary cannot replace the patch.
 
@@ -44,9 +44,9 @@ filter does not allow links to open an external browser.
 Without a parent policy, the profile's `storage/settings.json` stores the embed
 options as `externalUrlAllowlistEnabled` and `externalUrlAllowlist`.
 
-### Parent-managed embed policy (Linux)
+### Parent-managed settings (Linux)
 
-An administrator can manage the embed settings outside the user's profile at
+An administrator can manage all Legcord preferences outside the user's profile at
 the fixed path `/etc/legcord/policy.json`. Install the restrictive example with
 a root-owned directory and file:
 
@@ -59,23 +59,65 @@ sudo install -o root -g root -m 0644 \
 From a source checkout, use `packaging/parent-policy.json.example` as the input
 file instead.
 
-The example enables filtering with no allowed external sites:
+The version 2 example blocks external embeds and makes all Legcord settings
+parent-managed. Its `settings` object contains administrator overrides, and
+`language` selects the Legcord interface language:
 
 ```json
 {
-    "version": 1,
+    "version": 2,
     "externalUrlAllowlistEnabled": true,
-    "externalUrlAllowlist": []
+    "externalUrlAllowlist": [],
+    "language": "en-US",
+    "settings": {
+        "mobileMode": true,
+        "quickCss": false,
+        "useSystemCssEditor": false,
+        "mods": [],
+        "automaticUpdates": false
+    }
 }
 ```
 
-Restart Legcord after installing or editing the policy. The Networking controls
-then show **Managed by your parent**: the switch is disabled, the effective
-domain list is read-only, and saving is disabled. The main process rejects
-changes to these settings, including individual and bulk settings writes.
-Profile edits, new or portable profiles, backup restores, command-line settings,
-and safe mode cannot override the parent policy. User main-process plugins are
-not loaded in managed mode because they can change Electron's enforcement hooks.
+Restart Legcord after installing or editing the policy. Every Legcord settings
+page then shows **Managed by your parent**. Values can be inspected, searched,
+and copied; preference changes and editor, folder, file-picker, backup,
+plugin, keybind, and advanced diagnostic actions are blocked. The main process
+rejects direct IPC writes as well as individual/bulk configuration writes.
+The CSS system-editor route cannot start Foot or a file manager.
+
+For version 2, preferences come from application defaults plus the root-owned
+`settings` overrides, never from the daily user's profile. Omitted values use
+managed defaults: mobile mode and setup-complete are on; Quick CSS, process
+scanning, and the invite websocket are off. An administrator may copy selected
+existing preferences into `settings` before enabling management. Only known,
+typed settings are accepted. Keep the external embed values at the document's
+top level, and do not put derived `*PolicyManaged`/`*PolicyInvalid` metadata
+inside `settings`. Unknown or mistyped entries invalidate the whole document.
+
+Profile edits, new/portable profiles, backup restores, command-line settings,
+and safe mode cannot override the parent snapshot. User Chromium extensions,
+runtime plugins, profile themes, Quick CSS, and JavaScript/editor keybind
+actions do not run while settings are managed. Their files remain intact.
+Unsupported customization overrides (nonempty mods, enabled plugins, Quick CSS,
+system editors, executable keybinds, dangerous-switch bypasses, and automatic
+updates) invalidate a version 2 policy rather than enable user-writable code.
+The mandatory Shelter integration is pinned inside the installed app, with
+its source revision, license and checksum in `assets/vendor/`. Managed startup
+disables stored Shelter user plugins and updates before core initialization,
+locks plugin mutation APIs, and removes Shelter’s own plugin/import settings
+page. Script/manifest/data content remains stored; the plugin enable/update
+flags and developer-mode state are deliberately disabled. Back up the profile’s
+IndexedDB while Legcord is closed before upgrading if supervised rollback of
+that state may be needed.
+
+Developer tools are disabled. Normal chat, microphone dictation, mute/deafen,
+and window controls remain available.
+
+Existing version 1 embed-only policies remain supported and manage only the
+embed settings. Upgrade the policy to version 2 with a `settings` object to
+manage all Legcord preferences. Discord's own account, privacy, and server
+settings are separate from Legcord preferences.
 
 Use administrator access, for example `sudoedit /etc/legcord/policy.json`, to
 change the policy, then restart Legcord. Entries still require exact HTTPS
@@ -86,9 +128,10 @@ launches remain blocked independently of the embed policy.
 The policy directory and file must belong to root and must not be writable by
 group or other users. Symlinks are rejected. If `/etc/legcord` exists but the
 file is missing, unreadable, insecure, or invalid, Legcord keeps management
-active and blocks all external embeds. The settings page reports that the
+active, locks all settings with restrictive defaults, and blocks all external
+embeds. The settings page reports that the
 policy needs the parent's attention. Do not make the user's entire Legcord
-profile root-owned; ordinary app settings and login data must remain writable.
+profile root-owned; login data and ordinary chat state must remain writable.
 
 When `/etc/legcord` does not exist, the settings remain user-managed. To return
 to that mode, an administrator must remove the policy file and its empty

@@ -190,7 +190,7 @@ export function SettingsPage() {
                 <SupportBanner />
             </Show>
 
-            <div class={classes.search}>
+            <div class={classes.search} data-parent-settings-navigation>
                 <TextBox value={query()} onInput={(v: string) => setQuery(v)} placeholder={t["settings-search"]} />
             </div>
 

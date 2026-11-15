@@ -2,11 +2,14 @@ import fs from "node:fs";
 import path from "node:path";
 import { app } from "electron";
 import type { i18nStrings } from "../@types/i18nStrings.js";
+import { getManagedSettingsPolicy } from "./managedExternalUrlPolicy.js";
 
 let languageCache: i18nStrings | null = null;
 let currentLanguage: string | null = null;
 
 function resolveLangFromConfig(): string {
+    const policy = getManagedSettingsPolicy();
+    if (policy.managed) return policy.language;
     if (currentLanguage) return currentLanguage;
     try {
         const langConfigFile = `${path.join(app.getPath("userData"), "/storage/")}lang.json`;
@@ -53,6 +56,7 @@ function loadLanguage(): i18nStrings {
 }
 
 export function setLang(language: string): void {
+    if (getManagedSettingsPolicy().managed) return;
     const langConfigFile = `${path.join(app.getPath("userData"), "/storage/")}lang.json`;
     const dir = path.dirname(langConfigFile);
     if (!fs.existsSync(dir)) {

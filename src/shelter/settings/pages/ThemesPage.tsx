@@ -4,7 +4,7 @@ import type { ThemeManifest } from "../../../@types/themeManifest.js";
 import { EmptyState } from "../components/EmptyState.jsx";
 import { SettingsPageHeader } from "../components/SettingsPageHeader.jsx";
 import { ThemesCard } from "../components/ThemesCard.jsx";
-import { refreshThemes, setConfig } from "../settings.js";
+import { isSettingsManaged, refreshThemes, setConfig } from "../settings.js";
 import classes from "./ThemesPages.module.css";
 
 const {
@@ -19,6 +19,7 @@ export function ThemesPage() {
     refreshThemes();
 
     function installTheme() {
+        if (isSettingsManaged()) return;
         window.legcord.themes.install(downloadUrl());
         setDownloadUrl("");
         setTimeout(() => {
@@ -42,6 +43,7 @@ export function ThemesPage() {
                 note={store.i18n["settings-quickCss-desc"]}
                 value={settings().quickCss}
                 onChange={(e: boolean) => {
+                    if (isSettingsManaged()) return;
                     console.log("Toggled quick CSS", e);
                     if (e) {
                         window.legcord.themes.enableQuickCss();

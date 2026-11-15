@@ -7,6 +7,7 @@ import { DetectableCard } from "../components/DetectableCard.jsx";
 import { Dropdown } from "../components/Dropdown.jsx";
 import { EmptyState } from "../components/EmptyState.jsx";
 import { SettingsPageHeader } from "../components/SettingsPageHeader.jsx";
+import { isSettingsManaged } from "../settings.js";
 import classes from "./RegisteredGames.module.css";
 
 const {
@@ -41,12 +42,14 @@ export function RegisteredGamesPage() {
     }
 
     function blacklistGame(name: string, id: number) {
+        if (isSettingsManaged()) return;
         window.legcord.rpc.blacklistGame(name, id);
         setBlacklistVersion((v) => v + 1);
         setLastDetected((list) => filterBlacklisted(list));
     }
 
     function unblacklistGame(id: number) {
+        if (isSettingsManaged()) return;
         window.legcord.rpc.unblacklistGame(id);
         setBlacklistVersion((v) => v + 1);
     }
@@ -76,6 +79,7 @@ export function RegisteredGamesPage() {
     });
 
     function addNewGame() {
+        if (isSettingsManaged()) return;
         openModal(({ close }: { close: () => void }) => (
             <AddDetectableModal
                 close={() => {

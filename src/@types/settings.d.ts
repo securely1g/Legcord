@@ -53,6 +53,10 @@ export interface Settings {
     readonly externalUrlPolicyManaged?: boolean;
     /** An invalid/unavailable managed policy enforces the restrictive fallback. */
     readonly externalUrlPolicyInvalid?: boolean;
+    /** All Legcord preferences come from the administrator's policy snapshot. */
+    readonly settingsPolicyManaged?: boolean;
+    /** Invalid system policy locks all settings with restrictive defaults. */
+    readonly settingsPolicyInvalid?: boolean;
     skipSplash: boolean;
     performanceMode:
         | "battery"

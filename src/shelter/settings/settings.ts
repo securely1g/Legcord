@@ -6,7 +6,12 @@ const {
 
 export let isRestartRequired = false;
 
+export function isSettingsManaged(): boolean {
+    return (store.settings as Settings | undefined)?.settingsPolicyManaged === true;
+}
+
 export function setRestartRequired() {
+    if (isSettingsManaged()) return;
     isRestartRequired = true;
 }
 
@@ -78,6 +83,7 @@ export function withPreservedSettingsScroll<T>(run: () => T): T {
 }
 
 export function setConfig<K extends keyof Settings>(key: K, value: Settings[K], shouldRestart?: boolean) {
+    if (isSettingsManaged()) return;
     withPreservedSettingsScroll(() => {
         // Mutate in place — do NOT replace store.settings (that remounts the page and jumps scroll).
         store.settings[key] = value;
@@ -94,6 +100,7 @@ function removeMod(array: ValidMods[], filter: ValidMods) {
 }
 
 export function toggleMod(mod: ValidMods, enabled: boolean) {
+    if (isSettingsManaged()) return;
     isRestartRequired = true;
     const currentMods = store.settings.mods as ValidMods[];
     if (enabled) {

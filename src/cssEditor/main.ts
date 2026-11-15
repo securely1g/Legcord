@@ -1,10 +1,12 @@
 import fs from "node:fs";
 import path from "node:path";
 import { BrowserWindow, ipcMain } from "electron";
+import { getManagedSettingsPolicy } from "../common/managedExternalUrlPolicy.js";
 
 let cssWindow: BrowserWindow | null = null;
 
 export function openCssEditor(file: string) {
+    if (getManagedSettingsPolicy().managed) return;
     if (cssWindow?.focus) return cssWindow.focus();
     cssWindow = new BrowserWindow({
         width: 800,
@@ -17,6 +19,7 @@ export function openCssEditor(file: string) {
     void cssWindow.loadFile(path.join(import.meta.dirname, "html", "editor.html"));
 
     ipcMain.on("editor-setCSS", (_event, css: string) => {
+        if (getManagedSettingsPolicy().managed) return;
         fs.writeFileSync(file, css);
     });
 

@@ -1,6 +1,6 @@
 import { createSignal, Show } from "solid-js";
 import type { ThemeManifest } from "../../../@types/themeManifest.js";
-import { refreshThemes } from "../settings.js";
+import { isSettingsManaged, refreshThemes } from "../settings.js";
 import classes from "./ThemesCard.module.css";
 
 const {
@@ -12,6 +12,7 @@ export const ThemesCard = (props: { theme: ThemeManifest }) => {
     const [switchState, setSwitchState] = createSignal(props.theme.enabled);
 
     function toggleTheme(state: boolean) {
+        if (isSettingsManaged()) return;
         setSwitchState(state);
         if (props.theme.id) {
             window.legcord.themes.set(props.theme.id, state);
@@ -19,17 +20,20 @@ export const ThemesCard = (props: { theme: ThemeManifest }) => {
         refreshThemes();
     }
     function removeTheme() {
+        if (isSettingsManaged()) return;
         if (props.theme.id) {
             window.legcord.themes.uninstall(props.theme.id);
         }
         refreshThemes();
     }
     function editTheme() {
+        if (isSettingsManaged()) return;
         if (props.theme.id) {
             window.legcord.themes.edit(props.theme.id);
         }
     }
     function updateTheme() {
+        if (isSettingsManaged()) return;
         if (props.theme.updateSrc) {
             window.legcord.themes.install(props.theme.updateSrc);
         }
@@ -43,6 +47,7 @@ export const ThemesCard = (props: { theme: ThemeManifest }) => {
         });
     }
     function openThemesFolder() {
+        if (isSettingsManaged()) return;
         if (props.theme.id) {
             window.legcord.themes.folder(props.theme.id);
         }

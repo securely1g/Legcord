@@ -1,5 +1,6 @@
 import { createSignal, onCleanup, Show } from "solid-js";
 import type { KeybindActions } from "../../../@types/keybind.js";
+import { isSettingsManaged } from "../settings.js";
 import { Dropdown } from "./Dropdown.jsx";
 import classes from "./KeybindMaker.module.css";
 
@@ -66,6 +67,7 @@ export const KeybindMaker = (props: { close: () => void }) => {
     onCleanup(() => recording() && stopRecording());
 
     function startRecording() {
+        if (isSettingsManaged()) return;
         if (recording()) return;
         setRecording(true);
 
@@ -77,6 +79,7 @@ export const KeybindMaker = (props: { close: () => void }) => {
         document.body.addEventListener("keyup", log);
     }
     function save() {
+        if (isSettingsManaged()) return;
         const current = store.settings.keybinds;
         const keybind = {
             accelerator: accelerator(),
