@@ -101,17 +101,19 @@ it("entry-point fallback hides and blocks the native settings key without touchi
           closest(){return this;}
         };
         globalThis.builtin=new Element('shelter_shelter-settings_sidebar_item');
+        globalThis.nativePanel=new Element('shelter_shelter-settings_panel');
         globalThis.legcord=new Element('shelter_legcord-settings_sidebar_item');
         globalThis.listeners={};
-        globalThis.document={documentElement:{},querySelectorAll:()=>[builtin,legcord],addEventListener:(name,fn)=>listeners[name]=fn};`,
+        globalThis.document={documentElement:{},querySelectorAll:()=>[builtin,nativePanel,legcord],addEventListener:(name,fn)=>listeners[name]=fn};`,
         context,
     );
     runInContext(managedShelterSettingsGuardScript(true), context);
     assert.equal(runInContext("builtin.hidden && builtin.inert", context), true);
+    assert.equal(runInContext("nativePanel.hidden && nativePanel.inert", context), true);
     assert.equal(runInContext("Boolean(legcord.hidden || legcord.inert)", context), false);
     runInContext(
-        `for(const target of [builtin,legcord]) listeners.click({target,preventDefault:()=>calls.push(target.key),stopImmediatePropagation(){}});`,
+        `for(const target of [builtin,nativePanel,legcord]) listeners.click({target,preventDefault:()=>calls.push(target.key),stopImmediatePropagation(){}});`,
         context,
     );
-    assert.deepEqual(calls, ["shelter_shelter-settings_sidebar_item"]);
+    assert.deepEqual(calls, ["shelter_shelter-settings_sidebar_item", "shelter_shelter-settings_panel"]);
 });
