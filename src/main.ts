@@ -13,6 +13,7 @@ import {
     getConfig,
     getConfigLocation,
     isBackgroundStart,
+    isIpcWritableSettingsKey,
     setConfig,
     setFirstRun,
     setup,
@@ -107,7 +108,13 @@ function args(): void {
     if (args.startsWith("--")) return; //electron flag
     if (args.includes("=")) {
         const e = args.split("=");
-        setConfig(e[0] as keyof Settings, e[1]);
+        // A rejected managed setting must not trigger a relaunch with the
+        // same command-line override, which would otherwise repeat forever.
+        if (!isIpcWritableSettingsKey(e[0])) {
+            console.warn(`[Config] Cannot override read-only or unknown setting: ${e[0]}`);
+            return;
+        }
+        setConfig(e[0], e[1]);
         console.log(`Setting ${e[0]} to ${e[1]}`);
         app.relaunch();
         app.exit();

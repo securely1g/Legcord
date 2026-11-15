@@ -132,6 +132,9 @@ function isCompatibleVersion(versionPattern: string, version: string): boolean {
 }
 
 function getCompatibility(manifest: PluginManifest): { compatible: boolean; message?: string } {
+    if (manifest.main && getConfig("externalUrlPolicyManaged")) {
+        return { compatible: false, message: "Parent-managed policy disables plugins with main-process access." };
+    }
     const supported = manifest.compatibleVersions;
     if (!supported || supported.length === 0) {
         return { compatible: true };
@@ -155,6 +158,9 @@ function resolvePluginEntry(record: PluginRecord, target: PluginTarget) {
 }
 
 async function loadMain(record: PluginRecord) {
+    // Main plugins can replace request/IPC handlers or execute arbitrary Node
+    // code. Never evaluate even their module top-level in managed mode.
+    if (getConfig("externalUrlPolicyManaged")) return;
     if (record.loadedMain) return;
     const entry = resolvePluginEntry(record, "main");
     if (!entry) return;
@@ -247,6 +253,7 @@ export async function initializePluginSystem() {
 export async function setPluginEnabled(pluginId: string, enabled: boolean) {
     const record = records.get(pluginId);
     if (!record) return false;
+    if (enabled && record.manifest.main && getConfig("externalUrlPolicyManaged")) return false;
     if (enabled && !record.compatible) return false;
     setPluginState(pluginId, enabled);
     record.enabled = enabled;
@@ -261,6 +268,7 @@ export async function setPluginEnabled(pluginId: string, enabled: boolean) {
 export async function reloadPlugin(pluginId: string) {
     const record = records.get(pluginId);
     if (!record) return false;
+    if (record.manifest.main && getConfig("externalUrlPolicyManaged")) return false;
     if (!record.compatible) return false;
     disableMain(record);
     if (record.enabled) {
