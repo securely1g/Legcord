@@ -48,6 +48,7 @@ import { isPowerSavingEnabled, setPowerSaving } from "../power.js";
 import constPaths from "../shared/consts/paths.js";
 import { splashWindow } from "../splash/main.js";
 import { registerDictationIpc } from "./dictation.js";
+import { notifyExternalUrlPolicyChanged } from "./externalUrlFilter.js";
 import { refreshGlobalKeybinds } from "./globalKeybinds.js";
 import { getRuntimeEntries, getRuntimeScript, listPlugins, reloadPlugin, setPluginEnabled } from "./plugins/manager.js";
 import { processList, refreshProcessList } from "./rpcProcess.js";
@@ -321,6 +322,9 @@ export function registerIpc(passedWindow: BrowserWindow): void {
             return;
         }
         setConfig(key, value);
+        if (key === "externalUrlAllowlistEnabled" || key === "externalUrlAllowlist") {
+            notifyExternalUrlPolicyChanged();
+        }
         event.returnValue = undefined;
     });
     ipcMain.on("getRpcBlacklist", (event) => {
@@ -372,6 +376,7 @@ export function registerIpc(passedWindow: BrowserWindow): void {
         ) as Settings;
         console.log(writable);
         setConfigBulk(writable);
+        notifyExternalUrlPolicyChanged();
     });
     ipcMain.on("openStorageFolder", () => {
         shell.showItemInFolder(storagePath);

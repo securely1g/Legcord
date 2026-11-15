@@ -1,6 +1,6 @@
 # Omarchy Mobile fork
 
-This branch builds Legcord 1.3.1-omarchy.5. It retains the existing `legcord`
+This branch builds Legcord 1.3.1-omarchy.6. It retains the existing `legcord`
 profile and login, and packages the application as `legcord-mobile-git` on Arch.
 Fork builds use manual updates so an upstream binary cannot replace the patch.
 
@@ -19,6 +19,32 @@ messages work the same way. This remains Discord's experimental mobile web inter
 the native Android/iOS app.
 
 Mobile mode hides the App Launcher button from the message composer.
+
+## External links and embeds
+
+Links in this fork cannot launch an external browser, including links to
+`github.com`. Discord's own infrastructure remains available for login, chat,
+attachments, and calls. The external embed allowlist is enabled and empty by
+default, so third-party embeds such as YouTube players are blocked. External
+media proxied through Discord's CDN is checked against its original site;
+uploaded Discord attachments and avatars remain available. Blocked iframe,
+video, and audio players are unloaded to stop existing playback. These rules
+are separate from the Content Security Policy (CSP) setting.
+
+Open **Legcord Settings → Networking** to change **Restrict external embeds** or
+edit **Allowed embed domains**. Enter hostnames separated by lines or commas,
+choose **Save embed domains**, and restart Legcord to clear content that was
+already loaded. Entries match exact hostnames and allow HTTPS only:
+`github.com` does not allow `gist.github.com`, `api.github.com`, or other
+subdomains unless they are listed separately. An empty list blocks all external
+embeds while leaving Discord's infrastructure available. Invalid entries are
+shown as an error and cannot be saved. Adding a domain or turning off the embed
+filter does not allow links to open an external browser.
+
+The profile's `storage/settings.json` stores the embed options as
+`externalUrlAllowlistEnabled` and `externalUrlAllowlist`. These restrictions
+apply inside Legcord; they do not prevent browsing in other applications or
+prevent someone who can edit the settings from changing the embed allowlist.
 
 ## Local voice dictation
 

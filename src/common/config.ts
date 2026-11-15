@@ -3,6 +3,7 @@ import { platform } from "node:os";
 import { dirname, join } from "node:path";
 import { app, dialog } from "electron";
 import type { Settings } from "../@types/settings.js";
+import { normalizeAllowedDomains } from "./externalUrlPolicy.js";
 import { getLang } from "./lang.js";
 import { sanitizeAdditionalArguments } from "./sanitization.js";
 import { getWindowStateLocation } from "./windowState.js";
@@ -15,6 +16,12 @@ function ensureConfigCache(): Settings {
     try {
         const rawData = readFileSync(getConfigLocation(), "utf-8");
         configCache = JSON.parse(rawData) as Settings;
+        if (Object.hasOwn(configCache, "externalUrlAllowlist")) {
+            configCache.externalUrlAllowlist = normalizeAllowedDomains(configCache.externalUrlAllowlist);
+        }
+        if (Object.hasOwn(configCache, "externalUrlAllowlistEnabled")) {
+            configCache.externalUrlAllowlistEnabled = configCache.externalUrlAllowlistEnabled !== false;
+        }
     } catch {
         configCache = {} as Settings;
     }
@@ -62,6 +69,8 @@ const defaults: Settings = {
     blockPowerSavingInVoiceChat: false,
     useMacSystemPicker: false,
     mobileMode: false,
+    externalUrlAllowlistEnabled: true,
+    externalUrlAllowlist: [],
     tray: "dynamic",
     doneSetup: false,
     popoutPiP: false,
@@ -168,6 +177,8 @@ function migrateStartMinimized(settingsObject: Record<string, unknown>): boolean
     return false;
 }
 function sanitizeSettingsValue<K extends keyof Settings>(key: K, value: Settings[K]): Settings[K] {
+    if (key === "externalUrlAllowlist") return normalizeAllowedDomains(value) as Settings[K];
+    if (key === "externalUrlAllowlistEnabled") return (value !== false) as Settings[K];
     if (key === "additionalArguments" && typeof value === "string") {
         if (ensureConfigCache().disableDangerousSwitchBlocking) return value;
         return sanitizeAdditionalArguments(value) as Settings[K];

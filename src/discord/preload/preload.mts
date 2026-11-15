@@ -1,5 +1,6 @@
 import type { LegcordWindow } from "../../@types/legcordWindow.js";
 import "./bridge.js";
+import "./externalUrls.mjs";
 import "./mods/shelter.mjs";
 import "./mods/vencord.mjs";
 import "./mods/equicord.mjs";

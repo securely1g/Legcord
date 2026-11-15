@@ -2,6 +2,7 @@ import { createMemo, createSignal, Show } from "solid-js";
 import type { Settings } from "../../../@types/settings.js";
 import { BackupSection } from "../components/BackupSection.jsx";
 import { DropdownItem } from "../components/DropdownItem.jsx";
+import { ExternalUrlAllowlist } from "../components/ExternalUrlAllowlist.jsx";
 import {
     AdvancedPanelIcon,
     BackupPanelIcon,
@@ -129,6 +130,12 @@ export function SettingsPage() {
         networking: [
             t["settings-category-networking"],
             t["settings-category-networking-desc"],
+            t["settings-externalUrlAllowlistEnabled"],
+            t["settings-externalUrlAllowlistEnabled-desc"],
+            t["settings-externalUrlAllowlist"],
+            "allowlist",
+            "external links",
+            "embeds",
             t["settings-proxyMode"],
             t["settings-proxyRules"],
             t["settings-proxyPacScript"],
@@ -652,6 +659,18 @@ export function SettingsPage() {
                 forceOpen={panelForceOpen("networking")}
                 hidden={panelHidden("networking")}
             >
+                <SearchableSetting
+                    keywords={[
+                        t["settings-externalUrlAllowlistEnabled"],
+                        t["settings-externalUrlAllowlistEnabled-desc"],
+                        t["settings-externalUrlAllowlist"],
+                        "allowlist",
+                        "external links",
+                        "embeds",
+                    ]}
+                >
+                    <ExternalUrlAllowlist />
+                </SearchableSetting>
                 <SearchableSetting keywords={[t["settings-proxyMode"], t["settings-proxyMode-desc"], "proxy"]}>
                     <DropdownItem
                         value={settings.proxyMode ?? "system"}

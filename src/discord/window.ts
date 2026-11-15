@@ -6,26 +6,17 @@ import {
     BrowserWindow,
     type BrowserWindowConstructorOptions,
     clipboard,
-    dialog,
-    type MessageBoxOptions,
     nativeImage,
     net,
     screen,
-    shell,
 } from "electron";
 import contextMenu from "electron-context-menu";
-import { firstRun, getConfig, isBackgroundStart, setConfig } from "../common/config.js";
+import { firstRun, getConfig, isBackgroundStart } from "../common/config.js";
 import { navigateTo } from "../common/dom.js";
 import { forceQuit, setForceQuit } from "../common/forceQuit.js";
 import { handleCommands, passedValidArgument } from "../common/handleCommands.js";
 import { getLang } from "../common/lang.js";
-import {
-    isBlockedLocalhostWebSocket,
-    isDiscordIcsBlobUrl,
-    isDiscordPopoutUrl,
-    isTelemetryBlockedUrl,
-    isYouTubeEmbedOrProxyFrame,
-} from "../common/sanitization.js";
+import { isDiscordIcsBlobUrl, isDiscordPopoutUrl, isYouTubeEmbedOrProxyFrame } from "../common/sanitization.js";
 import { injectThemesMain } from "../common/themes.js";
 import {
     DEFAULT_WINDOW_HEIGHT,
@@ -129,24 +120,6 @@ contextMenu({
             },
         },
     ],
-    prepend: (_defaultActions, parameters) => [
-        {
-            label: getLang("contextMenu-searchGoogle"),
-            // Only show it when right-clicking text
-            visible: parameters.selectionText.trim().length > 0,
-            click: () => {
-                void shell.openExternal(`https://google.com/search?q=${encodeURIComponent(parameters.selectionText)}`);
-            },
-        },
-        {
-            label: getLang("contextMenu-searchDuckDuckGo"),
-            // Only show it when right-clicking text
-            visible: parameters.selectionText.trim().length > 0,
-            click: () => {
-                void shell.openExternal(`https://duckduckgo.com/?q=${encodeURIComponent(parameters.selectionText)}`);
-            },
-        },
-    ],
 });
 function doAfterDefiningTheWindow(passedWindow: BrowserWindow): void {
     createTray();
@@ -157,9 +130,6 @@ function doAfterDefiningTheWindow(passedWindow: BrowserWindow): void {
         passedWindow.hide(); // please don't flashbang the user
     }
 
-    // REVIEW - Test the protocol warning. I was not sure how to get it to pop up. For now I've voided the promises.
-
-    const ignoreProtocolWarning = getConfig("ignoreProtocolWarning");
     registerIpc(passedWindow);
     registerVenmicIpc();
     if (getConfig("mobileMode")) {
@@ -229,50 +199,14 @@ function doAfterDefiningTheWindow(passedWindow: BrowserWindow): void {
                     alwaysOnTop: getConfig("popoutPiP"),
                 },
             };
-        if (url.startsWith("https:") || url.startsWith("http:") || url.startsWith("mailto:")) {
-            void shell.openExternal(url);
-        } else if (ignoreProtocolWarning) {
-            void shell.openExternal(url);
-        } else {
-            const options: MessageBoxOptions = {
-                type: "question",
-                buttons: [getLang("dialog-openUrl-yes"), getLang("dialog-openUrl-no")],
-                defaultId: 1,
-                title: getLang("dialog-openUrl-title"),
-                message: getLang("dialog-openUrl-message").replace("{url}", url),
-                detail: getLang("dialog-openUrl-detail"),
-                checkboxLabel: getLang("dialog-openUrl-checkbox"),
-                checkboxChecked: false,
-            };
-
-            void dialog.showMessageBox(passedWindow, options).then(({ response, checkboxChecked }) => {
-                console.log(response, checkboxChecked);
-                if (checkboxChecked) {
-                    if (response === 0) {
-                        setConfig("ignoreProtocolWarning", true);
-                    } else {
-                        setConfig("ignoreProtocolWarning", false);
-                    }
-                }
-                if (response === 0) {
-                    void shell.openExternal(url);
-                }
-            });
-        }
-
+        // Never hand links (including allowlisted embed hosts) to a browser or
+        // another application. The allowlist controls embedded content only.
         return { action: "deny" };
     });
 
     passedWindow.webContents.session.setSpellCheckerLanguages(getConfig("spellcheckLanguage"));
 
     registerCustomHandler();
-
-    passedWindow.webContents.session.webRequest.onBeforeRequest((details, callback) => {
-        if (isTelemetryBlockedUrl(details.url) || isBlockedLocalhostWebSocket(details.url)) {
-            return callback({ cancel: true });
-        }
-        return callback({});
-    });
 
     // fix UMG video playback
     passedWindow.webContents.session.webRequest.onBeforeSendHeaders(
