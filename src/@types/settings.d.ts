@@ -45,6 +45,10 @@ export interface Settings {
     spellcheck: boolean;
     mods: ValidMods[];
     mobileMode: boolean;
+    /** Restrict external embedded content to exact HTTPS hostnames. Browser launches are always blocked. */
+    externalUrlAllowlistEnabled: boolean;
+    /** Subdomains must be listed separately. Discord infrastructure is allowed independently. */
+    externalUrlAllowlist: string[];
     skipSplash: boolean;
     performanceMode:
         | "battery"

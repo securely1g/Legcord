@@ -70,6 +70,7 @@ export function getAppliedFlags(): AppliedFlagsOutput {
 }
 
 import { fetchMods } from "./discord/extensions/modloader.js";
+import { installExternalUrlGuards } from "./discord/externalUrlFilter.js";
 import { initializePluginSystem } from "./discord/plugins/manager.js";
 import { createWindow } from "./discord/window.js";
 import { createSetupWindow } from "./setup/main.js";
@@ -78,6 +79,10 @@ export let settings: Settings;
 export let bypassSetup = false;
 checkForDataFolder();
 checkIfConfigExists();
+installExternalUrlGuards(() => ({
+    enabled: getConfig("externalUrlAllowlistEnabled") !== false,
+    domains: getConfig("externalUrlAllowlist") ?? [],
+}));
 app.setAsDefaultProtocolClient("discord");
 app.on("render-process-gone", (_event, _webContents, details) => {
     if (details.reason === "crashed") {
