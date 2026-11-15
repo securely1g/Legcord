@@ -1,0 +1,21 @@
+{
+    "project": "Shelter",
+    "build_repository": "https://github.com/uwu/shelter-builds",
+    "build_commit": "fcc9143b026a3d74c6268b1f0f5111aae22af669",
+    "source_repository": "https://github.com/uwu/shelter",
+    "source_commit": "6d42725f7ad21df5807789e852ca8c0f8c6eb61f",
+    "license": "CC0-1.0",
+    "retrieved_at": "2026-11-15",
+    "files": {
+        "shelter.js": {
+            "url": "https://raw.githubusercontent.com/uwu/shelter-builds/fcc9143b026a3d74c6268b1f0f5111aae22af669/shelter.js",
+            "sha256": "ba858e9cfb83503fdf307369eb62ebd458573d355575441eac913290da4809e2",
+            "bytes": 235850
+        },
+        "shelter.LICENSE": {
+            "url": "https://raw.githubusercontent.com/uwu/shelter/6d42725f7ad21df5807789e852ca8c0f8c6eb61f/LICENSE",
+            "sha256": "36ffd9dc085d529a7e60e1276d73ae5a030b020313e6c5408593a6ae2af39673",
+            "bytes": 6555
+        }
+    }
+}

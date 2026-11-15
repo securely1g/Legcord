@@ -3,10 +3,17 @@ import { app, shell } from "electron";
 import type { Keybind } from "../@types/keybind.js";
 import { mainWindows } from "../discord/window.js";
 import { navigateTo } from "./dom.js";
+import { getManagedSettingsPolicy } from "./managedExternalUrlPolicy.js";
 
 let isAudioEngineEnabled = false;
 
 export function runAction(keybind: Keybind) {
+    if (
+        getManagedSettingsPolicy().managed &&
+        (keybind.action === "openQuickCss" || keybind.action === "runJavascript")
+    ) {
+        return;
+    }
     switch (keybind.action) {
         case "mute":
             muteToggle();

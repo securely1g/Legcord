@@ -3,6 +3,7 @@ import { BrowserWindow, ipcMain } from "electron";
 import isDev from "electron-is-dev";
 import { getConfig, isBackgroundStart } from "../common/config.js";
 import { getLang } from "../common/lang.js";
+import { getManagedSettingsPolicy } from "../common/managedExternalUrlPolicy.js";
 
 export let splashWindow: BrowserWindow;
 export async function createSplashWindow(): Promise<void> {
@@ -19,6 +20,7 @@ export async function createSplashWindow(): Promise<void> {
         autoHideMenuBar: true,
         webPreferences: {
             sandbox: false,
+            devTools: !getManagedSettingsPolicy().managed,
             preload: path.join(import.meta.dirname, "splash", "preload.mjs"),
         },
     });

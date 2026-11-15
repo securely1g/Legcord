@@ -4,6 +4,7 @@ import { EmptyState } from "../components/EmptyState.jsx";
 import { KeybindCard } from "../components/KeybindCard.jsx";
 import { KeybindMaker } from "../components/KeybindMaker.jsx";
 import { SettingsPageHeader } from "../components/SettingsPageHeader.jsx";
+import { isSettingsManaged } from "../settings.js";
 import classes from "./KeybindsPage.module.css";
 
 const {
@@ -13,6 +14,7 @@ const {
 
 export function KeybindsPage() {
     function addNewKeybind() {
+        if (isSettingsManaged()) return;
         openModal(({ close }: { close: () => void }) => <KeybindMaker close={close} />);
     }
 

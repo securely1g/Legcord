@@ -1,5 +1,6 @@
 import { closeSync, constants, fstatSync, lstatSync, openSync, readSync } from "node:fs";
 import { normalizeAllowedDomains } from "./externalUrlPolicy.js";
+import { freezeManagedValue, validManagedSettings } from "./managedSettingsSchema.js";
 
 export const MANAGED_EXTERNAL_URL_POLICY_DIRECTORY = "/etc/legcord";
 export const MANAGED_EXTERNAL_URL_POLICY_PATH = "/etc/legcord/policy.json";
@@ -10,6 +11,18 @@ export interface ManagedExternalUrlPolicy {
     readonly enabled: boolean;
     readonly domains: readonly string[];
     readonly invalid: boolean;
+}
+
+export interface ManagedSettingsPolicy {
+    readonly managed: boolean;
+    readonly invalid: boolean;
+    readonly settings: Readonly<Record<string, unknown>>;
+    readonly language: string;
+}
+
+interface ManagedPolicies {
+    readonly external: ManagedExternalUrlPolicy;
+    readonly settings: ManagedSettingsPolicy;
 }
 
 interface PolicyFileInfo {
@@ -50,29 +63,71 @@ const invalidPolicy: ManagedExternalUrlPolicy = Object.freeze({
     domains: Object.freeze([] as string[]),
     invalid: true,
 });
+const unmanagedSettings: ManagedSettingsPolicy = Object.freeze({
+    managed: false,
+    invalid: false,
+    settings: Object.freeze({}),
+    language: "en-US",
+});
+const invalidSettings: ManagedSettingsPolicy = Object.freeze({
+    managed: true,
+    invalid: true,
+    settings: Object.freeze({}),
+    language: "en-US",
+});
+const invalidPolicies: ManagedPolicies = Object.freeze({ external: invalidPolicy, settings: invalidSettings });
+const unmanagedPolicies: ManagedPolicies = Object.freeze({ external: unmanagedPolicy, settings: unmanagedSettings });
 
 /** Invalid administrator documents never grant the user control or partial hosts. */
-export function parseManagedExternalUrlPolicy(document: unknown): ManagedExternalUrlPolicy {
-    if (!document || typeof document !== "object" || Array.isArray(document)) return invalidPolicy;
+function parseManagedPolicies(document: unknown): ManagedPolicies {
+    if (!document || typeof document !== "object" || Array.isArray(document)) return invalidPolicies;
     const value = document as Record<string, unknown>;
     const keys = Object.keys(value);
+    const allSettings = value.version === 2;
+    const allowedKeys = [
+        "version",
+        "externalUrlAllowlistEnabled",
+        "externalUrlAllowlist",
+        ...(allSettings ? ["settings", "language"] : []),
+    ];
     if (
-        keys.length !== 3 ||
-        value.version !== 1 ||
+        (!allSettings && value.version !== 1) ||
+        (allSettings ? !validManagedSettings(value.settings) : keys.length !== 3) ||
+        (allSettings &&
+            value.language !== undefined &&
+            (typeof value.language !== "string" || !/^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/.test(value.language))) ||
         typeof value.externalUrlAllowlistEnabled !== "boolean" ||
         !Array.isArray(value.externalUrlAllowlist) ||
         value.externalUrlAllowlist.length > 256 ||
-        !keys.every((key) => ["version", "externalUrlAllowlistEnabled", "externalUrlAllowlist"].includes(key)) ||
+        !keys.every((key) => allowedKeys.includes(key)) ||
         !value.externalUrlAllowlist.every((entry) => normalizeAllowedDomains([entry]).length === 1)
     ) {
-        return invalidPolicy;
+        return invalidPolicies;
     }
     return Object.freeze({
-        managed: true,
-        enabled: value.externalUrlAllowlistEnabled,
-        domains: Object.freeze(normalizeAllowedDomains(value.externalUrlAllowlist)),
-        invalid: false,
+        external: Object.freeze({
+            managed: true,
+            enabled: value.externalUrlAllowlistEnabled,
+            domains: Object.freeze(normalizeAllowedDomains(value.externalUrlAllowlist)),
+            invalid: false,
+        }),
+        settings: allSettings
+            ? Object.freeze({
+                  managed: true,
+                  invalid: false,
+                  settings: freezeManagedValue(structuredClone(value.settings as Record<string, unknown>)),
+                  language: typeof value.language === "string" ? value.language : "en-US",
+              })
+            : unmanagedSettings,
     });
+}
+
+export function parseManagedExternalUrlPolicy(document: unknown): ManagedExternalUrlPolicy {
+    return parseManagedPolicies(document).external;
+}
+
+export function parseManagedSettingsPolicy(document: unknown): ManagedSettingsPolicy {
+    return parseManagedPolicies(document).settings;
 }
 
 function trustedOwnerAndMode(info: PolicyFileInfo): boolean {
@@ -88,22 +143,19 @@ function isMissing(error: unknown): boolean {
  * directory exists, a missing, unreadable or unsafe policy locks to an empty
  * allowlist. Neither profiles nor command-line/environment paths participate.
  */
-export function readManagedExternalUrlPolicy(
-    fileSystem: ManagedPolicyFileSystem,
-    platform: string,
-): ManagedExternalUrlPolicy {
-    if (platform !== "linux") return unmanagedPolicy;
+function readManagedPolicies(fileSystem: ManagedPolicyFileSystem, platform: string): ManagedPolicies {
+    if (platform !== "linux") return unmanagedPolicies;
     let fd: number | undefined;
     try {
         const etc = fileSystem.lstat("/etc");
-        if (!trustedOwnerAndMode(etc) || !etc.isDirectory()) return invalidPolicy;
+        if (!trustedOwnerAndMode(etc) || !etc.isDirectory()) return invalidPolicies;
         let directory: PolicyFileInfo;
         try {
             directory = fileSystem.lstat(MANAGED_EXTERNAL_URL_POLICY_DIRECTORY);
         } catch (error) {
-            return isMissing(error) ? unmanagedPolicy : invalidPolicy;
+            return isMissing(error) ? unmanagedPolicies : invalidPolicies;
         }
-        if (!trustedOwnerAndMode(directory) || !directory.isDirectory()) return invalidPolicy;
+        if (!trustedOwnerAndMode(directory) || !directory.isDirectory()) return invalidPolicies;
         // NOFOLLOW refuses symlinks; NONBLOCK avoids a raced FIFO hanging startup.
         fd = fileSystem.open(
             MANAGED_EXTERNAL_URL_POLICY_PATH,
@@ -117,7 +169,7 @@ export function readManagedExternalUrlPolicy(
             file.size < 0 ||
             file.size > MAX_MANAGED_POLICY_BYTES
         ) {
-            return invalidPolicy;
+            return invalidPolicies;
         }
         // Read through the descriptor we checked, bounded even if an admin is
         // concurrently replacing/growing the file. Decode UTF-8 without repair.
@@ -128,11 +180,11 @@ export function readManagedExternalUrlPolicy(
             if (count === 0) break;
             length += count;
         }
-        if (length > MAX_MANAGED_POLICY_BYTES) return invalidPolicy;
+        if (length > MAX_MANAGED_POLICY_BYTES) return invalidPolicies;
         const text = new TextDecoder("utf-8", { fatal: true }).decode(buffer.subarray(0, length));
-        return parseManagedExternalUrlPolicy(JSON.parse(text));
+        return parseManagedPolicies(JSON.parse(text));
     } catch {
-        return invalidPolicy;
+        return invalidPolicies;
     } finally {
         if (fd !== undefined) {
             try {
@@ -144,15 +196,39 @@ export function readManagedExternalUrlPolicy(
     }
 }
 
-let cachedPolicy: ManagedExternalUrlPolicy | undefined;
+export function readManagedExternalUrlPolicy(
+    fileSystem: ManagedPolicyFileSystem,
+    platform: string,
+): ManagedExternalUrlPolicy {
+    return readManagedPolicies(fileSystem, platform).external;
+}
+
+export function readManagedSettingsPolicy(
+    fileSystem: ManagedPolicyFileSystem,
+    platform: string,
+): ManagedSettingsPolicy {
+    return readManagedPolicies(fileSystem, platform).settings;
+}
+
+let cachedPolicies: ManagedPolicies | undefined;
+
+function getManagedPolicies(): ManagedPolicies {
+    if (!cachedPolicies) {
+        cachedPolicies = readManagedPolicies(systemFileSystem, process.platform);
+        if (cachedPolicies.external.invalid) {
+            console.warn(
+                "[Managed policy] Invalid or unavailable system policy; settings and external embeds remain blocked.",
+            );
+        }
+    }
+    return cachedPolicies;
+}
 
 /** One immutable system-policy snapshot per process; administrator edits need restart. */
 export function getManagedExternalUrlPolicy(): ManagedExternalUrlPolicy {
-    if (!cachedPolicy) {
-        cachedPolicy = readManagedExternalUrlPolicy(systemFileSystem, process.platform);
-        if (cachedPolicy.invalid) {
-            console.warn("[Managed policy] Invalid or unavailable system policy; external embeds remain blocked.");
-        }
-    }
-    return cachedPolicy;
+    return getManagedPolicies().external;
+}
+
+export function getManagedSettingsPolicy(): ManagedSettingsPolicy {
+    return getManagedPolicies().settings;
 }

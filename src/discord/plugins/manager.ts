@@ -4,6 +4,7 @@ import { pathToFileURL } from "node:url";
 import { app, BrowserWindow, dialog, ipcMain, shell } from "electron";
 import { after, before, instead } from "spitroast/dist/index.mjs";
 import { getConfig, setConfig } from "../../common/config.js";
+import { getManagedSettingsPolicy } from "../../common/managedExternalUrlPolicy.js";
 
 type PluginTarget = "main" | "preload" | "renderer";
 type Cleanup = () => void;
@@ -132,6 +133,9 @@ function isCompatibleVersion(versionPattern: string, version: string): boolean {
 }
 
 function getCompatibility(manifest: PluginManifest): { compatible: boolean; message?: string } {
+    if (getManagedSettingsPolicy().managed) {
+        return { compatible: false, message: "User plugins are disabled by the parent-managed settings policy." };
+    }
     if (manifest.main && getConfig("externalUrlPolicyManaged")) {
         return { compatible: false, message: "Parent-managed policy disables plugins with main-process access." };
     }
@@ -160,7 +164,7 @@ function resolvePluginEntry(record: PluginRecord, target: PluginTarget) {
 async function loadMain(record: PluginRecord) {
     // Main plugins can replace request/IPC handlers or execute arbitrary Node
     // code. Never evaluate even their module top-level in managed mode.
-    if (getConfig("externalUrlPolicyManaged")) return;
+    if (getManagedSettingsPolicy().managed || getConfig("externalUrlPolicyManaged")) return;
     if (record.loadedMain) return;
     const entry = resolvePluginEntry(record, "main");
     if (!entry) return;
@@ -216,6 +220,10 @@ function disableMain(record: PluginRecord) {
 }
 
 export async function initializePluginSystem() {
+    if (getManagedSettingsPolicy().managed) {
+        records.clear();
+        return;
+    }
     if (!existsSync(pluginFolder)) {
         mkdirSync(pluginFolder, { recursive: true });
     }
@@ -251,6 +259,7 @@ export async function initializePluginSystem() {
 }
 
 export async function setPluginEnabled(pluginId: string, enabled: boolean) {
+    if (getManagedSettingsPolicy().managed) return false;
     const record = records.get(pluginId);
     if (!record) return false;
     if (enabled && record.manifest.main && getConfig("externalUrlPolicyManaged")) return false;
@@ -266,6 +275,7 @@ export async function setPluginEnabled(pluginId: string, enabled: boolean) {
 }
 
 export async function reloadPlugin(pluginId: string) {
+    if (getManagedSettingsPolicy().managed) return false;
     const record = records.get(pluginId);
     if (!record) return false;
     if (record.manifest.main && getConfig("externalUrlPolicyManaged")) return false;
@@ -295,6 +305,7 @@ export function listPlugins() {
 }
 
 export function getRuntimeEntries(target: Exclude<PluginTarget, "main">) {
+    if (getManagedSettingsPolicy().managed) return [];
     return [...records.values()]
         .filter((record) => record.enabled && record.compatible)
         .map((record) => {
@@ -310,6 +321,7 @@ export function getRuntimeEntries(target: Exclude<PluginTarget, "main">) {
 }
 
 export function getRuntimeScript(pluginId: string, target: Exclude<PluginTarget, "main">) {
+    if (getManagedSettingsPolicy().managed) return null;
     const record = records.get(pluginId);
     if (!record?.enabled || !record.compatible) return null;
     const entry = resolvePluginEntry(record, target);

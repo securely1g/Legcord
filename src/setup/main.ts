@@ -5,6 +5,7 @@ import { app, BrowserWindow, type BrowserWindowConstructorOptions, ipcMain } fro
 import type { Settings } from "../@types/settings.js";
 import { getConfig, getConfigLocation, setConfigBulk } from "../common/config.js";
 import { getLang, getRawLang } from "../common/lang.js";
+import { getManagedSettingsPolicy } from "../common/managedExternalUrlPolicy.js";
 import { handleRestart } from "../main.js";
 
 let setupWindow: BrowserWindow;
@@ -23,6 +24,7 @@ export async function createSetupWindow(): Promise<void> {
             autoHideMenuBar: true,
             webPreferences: {
                 spellcheck: false,
+                devTools: !getManagedSettingsPolicy().managed,
                 preload: path.join(import.meta.dirname, "setup", "preload.mjs"),
             },
         };
@@ -48,10 +50,15 @@ export async function createSetupWindow(): Promise<void> {
             event.returnValue = process.platform;
         });
         ipcMain.on("setup-saveSettings", (_event, args: Settings) => {
+            if (getManagedSettingsPolicy().managed) return;
             console.log(args);
             setConfigBulk(args);
         });
         ipcMain.on("setup-quit", () => {
+            if (getManagedSettingsPolicy().managed) {
+                app.quit();
+                return;
+            }
             fs.unlink(getConfigLocation(), (err) => {
                 if (err) throw err;
 

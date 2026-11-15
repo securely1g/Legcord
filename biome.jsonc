@@ -3,7 +3,7 @@
     "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
     "files": {
         "ignoreUnknown": false,
-        "includes": ["**", "!**/assets/app/js", "!**/assets/**/*.svg"]
+        "includes": ["**", "!**/assets/app/js", "!**/assets/**/*.svg", "!**/assets/vendor/shelter.js"]
     },
     "formatter": {
         "enabled": true,

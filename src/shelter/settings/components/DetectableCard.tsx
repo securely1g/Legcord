@@ -1,5 +1,5 @@
 import type { Game } from "arrpc";
-import { setRestartRequired } from "../settings.js";
+import { isSettingsManaged, setRestartRequired } from "../settings.js";
 import classes from "./DetectableCard.module.css";
 
 const {
@@ -9,6 +9,7 @@ const {
 
 export const DetectableCard = (props: { detectable: Game; onRemove: () => void }) => {
     function removeDetectable() {
+        if (isSettingsManaged()) return;
         openConfirmationModal({
             header: () => store.i18n["games-removeConfirmHeader"],
             body: () => store.i18n["games-removeConfirmBody"],
@@ -17,6 +18,7 @@ export const DetectableCard = (props: { detectable: Game; onRemove: () => void }
             cancelText: store.i18n["settings-restartLater"],
         }).then(
             () => {
+                if (isSettingsManaged()) return;
                 window.legcord.rpc.removeDetectable(props.detectable.id);
                 setRestartRequired();
                 props.onRemove();

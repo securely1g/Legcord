@@ -1,4 +1,5 @@
 import { createSignal, Show } from "solid-js";
+import { isSettingsManaged } from "../settings.js";
 import classes from "./BackupSection.module.css";
 
 const {
@@ -122,6 +123,7 @@ function BackupOptionsModal(props: { close: () => void; onConfirm: (includes: In
 }
 
 function applyClientModsFromRestore(raw: unknown): void {
+    if (isSettingsManaged()) return;
     if (!raw || typeof raw !== "object") return;
     const cm = raw as Record<string, unknown>;
     if (typeof cm.vencordLocalStorage === "string" && cm.vencordLocalStorage.length > 0) {
@@ -162,6 +164,7 @@ export function BackupSection(props: { embedded?: boolean }) {
     }
 
     async function runBackup(includes: IncludeOptions) {
+        if (isSettingsManaged()) return;
         const payload = {
             includes,
             clientMods: buildClientMods(includes),
@@ -189,6 +192,7 @@ export function BackupSection(props: { embedded?: boolean }) {
     }
 
     function openBackupModal() {
+        if (isSettingsManaged()) return;
         openModal(({ close }: { close: () => void }) => (
             <BackupOptionsModal
                 close={close}
@@ -200,6 +204,7 @@ export function BackupSection(props: { embedded?: boolean }) {
     }
 
     function restoreFromBackup() {
+        if (isSettingsManaged()) return;
         openConfirmationModal({
             header: () => t["backup-restoreConfirmHeader"],
             body: () => t["backup-restoreConfirmBody"],
@@ -208,6 +213,7 @@ export function BackupSection(props: { embedded?: boolean }) {
             cancelText: t["backup-restoreCancel"],
         }).then(
             async () => {
+                if (isSettingsManaged()) return;
                 const raw = await window.legcord.backup.restore();
                 let parsed: { ok?: boolean; error?: string; clientMods?: unknown };
                 try {

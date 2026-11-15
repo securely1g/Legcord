@@ -3,6 +3,7 @@ import type { LegcordPluginInfo } from "../../../@types/legcordWindow.js";
 import { EmptyState } from "../components/EmptyState.jsx";
 import { PluginCard } from "../components/PluginCard.jsx";
 import { SettingsPageHeader } from "../components/SettingsPageHeader.jsx";
+import { isSettingsManaged } from "../settings.js";
 import classes from "./PluginsPage.module.css";
 
 const {
@@ -36,6 +37,7 @@ export function PluginsPage() {
     };
 
     const onToggle = async (plugin: LegcordPluginInfo, enabled: boolean) => {
+        if (isSettingsManaged()) return;
         setBusy(plugin.id, true);
         try {
             if (enabled && !plugin.compatible) {
@@ -66,6 +68,7 @@ export function PluginsPage() {
     };
 
     const onReload = async (plugin: LegcordPluginInfo) => {
+        if (isSettingsManaged()) return;
         setBusy(plugin.id, true);
         try {
             const result = await window.legcord.plugins.reload(plugin.id);

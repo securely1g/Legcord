@@ -61,7 +61,13 @@ export function SettingsPanel(props: SettingsPanelProps) {
             class={`${classes.container} ${isOpen() ? classes.containerOpened : ""}`}
             style={{ display: props.hidden ? "none" : undefined }}
         >
-            <button type="button" class={classes.header} onClick={toggle} aria-expanded={isOpen()}>
+            <button
+                type="button"
+                class={classes.header}
+                onClick={toggle}
+                aria-expanded={isOpen()}
+                data-parent-settings-navigation
+            >
                 <div class={classes.icon}>
                     <props.icon />
                 </div>

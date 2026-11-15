@@ -1,6 +1,8 @@
 const { ipcRenderer, webFrame } = require("electron");
 
 import type { ModBundle } from "../../../@types/ModBundle.js";
+import { managedShelterSettingsGuardScript } from "../managedShelter.js";
+import { buildManagedShelterBootstrap } from "../managedShelterStartup.js";
 
 const requiredPlugins: Record<string, [string, { isVisible: boolean; allowedActions: Record<string, true> }]> = {
     "legcord-arrpc": ["legcord://plugins/rpc/", { isVisible: false, allowedActions: {} }],
@@ -17,12 +19,26 @@ if (process.platform === "darwin") {
 }
 async function inject() {
     try {
+        const managed = ipcRenderer.sendSync("getConfig", "settingsPolicyManaged") === true;
         await ipcRenderer.invoke("getShelterBundle").then(async (bundle: ModBundle) => {
             if (bundle?.enabled) {
-                await webFrame.executeJavaScript(`(()=>{
+                if (managed) {
+                    if (typeof bundle.js !== "string" || !bundle.js) {
+                        throw new Error("Parent-managed Shelter package runtime is unavailable.");
+                    }
+                    await webFrame.executeJavaScript(
+                        buildManagedShelterBootstrap(
+                            bundle.js,
+                            requiredPlugins,
+                            managedShelterSettingsGuardScript(true),
+                        ),
+                    );
+                } else {
+                    await webFrame.executeJavaScript(`(()=>{
                 const SHELTER_INJECTOR_PLUGINS = ${JSON.stringify(requiredPlugins)};
                 ${bundle.js}
             })()`);
+                }
             }
         });
     } catch (e) {

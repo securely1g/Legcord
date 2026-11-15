@@ -4,6 +4,7 @@ import { getConfig } from "../common/config.js";
 import { setForceQuit } from "../common/forceQuit.js";
 import { openSettings, runAction } from "../common/keybindActions.js";
 import { getLang } from "../common/lang.js";
+import { getManagedSettingsPolicy } from "../common/managedExternalUrlPolicy.js";
 import { revealWindow } from "../common/windowVisibility.js";
 import { mainWindows } from "./window.js";
 
@@ -45,6 +46,8 @@ export function setMenu(): void {
                 {
                     label: getLang("menu-developerTools"),
                     role: "toggleDevTools",
+                    enabled: !getManagedSettingsPolicy().managed,
+                    visible: !getManagedSettingsPolicy().managed,
                 },
                 {
                     label: getLang("menu-openSettings"),

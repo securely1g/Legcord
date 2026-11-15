@@ -4,6 +4,7 @@ import { app, type BrowserWindow } from "electron";
 import type { ThemeManifest } from "../@types/themeManifest.js";
 import { mainWindows } from "../discord/window.js";
 import { getConfig } from "./config.js";
+import { getManagedSettingsPolicy } from "./managedExternalUrlPolicy.js";
 import { resolvePathUnderBaseDir } from "./sanitization.js";
 
 const themeManifestCache = new Map<string, { manifest: ThemeManifest; mtime: number }>();
@@ -206,6 +207,7 @@ function debouncedRefreshThemeList(): void {
 }
 
 export function startThemeWatcher(): void {
+    if (getManagedSettingsPolicy().managed) return;
     if (themeWatcher) return;
     try {
         if (!fs.existsSync(themesFolder)) {
@@ -266,6 +268,7 @@ function buildThemeCssCache(): void {
 }
 
 export function injectThemesMain(browserWindow: BrowserWindow): void {
+    if (getManagedSettingsPolicy().managed) return;
     if (process.argv.includes("--safe-mode")) return;
     if (!fs.existsSync(themesFolder)) {
         fs.mkdirSync(themesFolder);
@@ -284,6 +287,7 @@ export function injectThemesMain(browserWindow: BrowserWindow): void {
 }
 
 export function uninstallTheme(id: string) {
+    if (getManagedSettingsPolicy().managed) return;
     const themePath = resolveThemeDir(id);
     const bdPath = resolveThemeDir(`${id}-BD`);
     if (themePath && fs.existsSync(themePath)) {
@@ -302,6 +306,7 @@ export function uninstallTheme(id: string) {
 }
 
 export function setThemeEnabled(id: string, enabled: boolean) {
+    if (getManagedSettingsPolicy().managed) return;
     const themePath = resolveThemeDir(id);
     if (!themePath) {
         console.warn(`[Theme Manager] Rejected unsafe theme id: ${id}`);
@@ -366,6 +371,7 @@ function installThemeFromCode(code: string, linkOrPath?: string): void {
 }
 
 export async function installTheme(linkOrPath: string, options: { allowLocalPath?: boolean } = {}) {
+    if (getManagedSettingsPolicy().managed) return;
     let code = "";
     let isLinkImport = false;
     if (linkOrPath.startsWith("https://") || linkOrPath.startsWith("http://")) {
@@ -381,6 +387,7 @@ export async function installTheme(linkOrPath: string, options: { allowLocalPath
 }
 
 export function initQuickCss(browserWindow: BrowserWindow) {
+    if (getManagedSettingsPolicy().managed) return;
     if (process.argv.includes("--safe-mode")) return;
     const quickCssPath = path.join(userDataPath, "/quickCss.css");
 

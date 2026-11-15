@@ -6,13 +6,14 @@ import {
     SettingsSidebarIcon,
     ThemesSidebarIcon,
 } from "./components/icons/SettingsNavIcons.jsx";
+import { managedSettingsPage } from "./components/ManagedSettingsSection.jsx";
 import { KeybindsPage } from "./pages/KeybindsPage.jsx";
 import { PluginsPage } from "./pages/PluginsPage.jsx";
 import { RegisteredGamesPage } from "./pages/RegisteredGamesPage.jsx";
 import { SettingsPage } from "./pages/SettingsPage.jsx";
 import { ThemesPage } from "./pages/ThemesPage.jsx";
 
-import { isRestartRequired, refreshSettings, refreshThemes } from "./settings.js";
+import { isRestartRequired, isSettingsManaged, refreshSettings, refreshThemes } from "./settings.js";
 
 const {
     plugin: { store },
@@ -28,13 +29,25 @@ function registerSections(): (() => void)[] {
     const array = [
         registerSection("divider"),
         registerSection("header", "Legcord"),
-        registerSection("section", "legcord-settings", "Settings", SettingsPage, { icon: SettingsSidebarIcon }),
-        registerSection("section", "legcord-themes", "Themes", ThemesPage, { icon: ThemesSidebarIcon }),
-        registerSection("section", "legcord-keybinds", "Keybinds", KeybindsPage, { icon: KeybindsSidebarIcon }),
-        registerSection("section", "legcord-games", "Games", RegisteredGamesPage, { icon: GamesSidebarIcon }),
+        registerSection("section", "legcord-settings", "Settings", managedSettingsPage(SettingsPage), {
+            icon: SettingsSidebarIcon,
+        }),
+        registerSection("section", "legcord-themes", "Themes", managedSettingsPage(ThemesPage), {
+            icon: ThemesSidebarIcon,
+        }),
+        registerSection("section", "legcord-keybinds", "Keybinds", managedSettingsPage(KeybindsPage), {
+            icon: KeybindsSidebarIcon,
+        }),
+        registerSection("section", "legcord-games", "Games", managedSettingsPage(RegisteredGamesPage), {
+            icon: GamesSidebarIcon,
+        }),
     ];
     if (window.legcord.settings.getConfig().showExperimentalPluginMenu) {
-        array.push(registerSection("section", "legcord-plugins", "Plugins", PluginsPage, { icon: PluginsSidebarIcon }));
+        array.push(
+            registerSection("section", "legcord-plugins", "Plugins", managedSettingsPage(PluginsPage), {
+                icon: PluginsSidebarIcon,
+            }),
+        );
     }
     return array;
 }
@@ -42,7 +55,7 @@ function registerSections(): (() => void)[] {
 function restartRequired(payload: { event: string; properties: { origin_pane: string } }) {
     if (payload.event === "settings_pane_viewed" && typeof payload.properties.origin_pane !== "undefined") {
         const pane = payload.properties.origin_pane;
-        if ((pane === "legcord-settings" || pane === "legcord-games") && isRestartRequired) {
+        if ((pane === "legcord-settings" || pane === "legcord-games") && isRestartRequired && !isSettingsManaged()) {
             openConfirmationModal({
                 header: () => store.i18n?.["settings-restartRequired"] ?? "Restart required",
                 body: () => store.i18n?.["settings-restartRequiredBody"] ?? "A restart is required to apply changes.",
@@ -63,7 +76,7 @@ export function onLoad() {
     // used for restart required dialog later
     store.i18n = window.legcord.translations;
     log("Legcord Settings");
-    window.legcord.settings.setLang(storesFlat.LocaleStore.locale);
+    if (!isSettingsManaged()) window.legcord.settings.setLang(storesFlat.LocaleStore.locale);
     settingsCleanups = registerSections();
     dispatcher.subscribe("TRACK", restartRequired);
 }

@@ -1,5 +1,18 @@
 {
-    "version": 1,
+    "version": 2,
     "externalUrlAllowlistEnabled": true,
-    "externalUrlAllowlist": []
+    "externalUrlAllowlist": [],
+    "language": "en-US",
+    "settings": {
+        "mobileMode": true,
+        "doneSetup": true,
+        "quickCss": false,
+        "useSystemCssEditor": false,
+        "extendedPluginAbilities": false,
+        "showExperimentalPluginMenu": false,
+        "mods": [],
+        "inviteWebsocket": false,
+        "processScanning": false,
+        "automaticUpdates": false
+    }
 }
