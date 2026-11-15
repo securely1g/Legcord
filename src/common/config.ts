@@ -5,6 +5,7 @@ import { app, dialog } from "electron";
 import type { Settings } from "../@types/settings.js";
 import { normalizeAllowedDomains } from "./externalUrlPolicy.js";
 import { getLang } from "./lang.js";
+import { getManagedExternalUrlPolicy } from "./managedExternalUrlPolicy.js";
 import { sanitizeAdditionalArguments } from "./sanitization.js";
 import { getWindowStateLocation } from "./windowState.js";
 export let firstRun: boolean;
@@ -15,7 +16,10 @@ function ensureConfigCache(): Settings {
     if (configCache) return configCache;
     try {
         const rawData = readFileSync(getConfigLocation(), "utf-8");
-        configCache = JSON.parse(rawData) as Settings;
+        const parsed = JSON.parse(rawData) as Settings;
+        configCache = Object.fromEntries(
+            Object.entries(parsed).filter(([key]) => !isManagedPolicyMetadata(key)),
+        ) as Settings;
         if (Object.hasOwn(configCache, "externalUrlAllowlist")) {
             configCache.externalUrlAllowlist = normalizeAllowedDomains(configCache.externalUrlAllowlist);
         }
@@ -102,13 +106,25 @@ export const SETTINGS_KEYS = new Set<string>(Object.keys(defaults));
 /** Keys that exist in Settings but must not be writable from renderer IPC. */
 const IPC_BLOCKED_SETTINGS_KEYS = new Set<keyof Settings>(["disableDangerousSwitchBlocking"]);
 
+function isExternalUrlSetting(key: unknown): boolean {
+    return key === "externalUrlAllowlistEnabled" || key === "externalUrlAllowlist";
+}
+
+function isManagedPolicyMetadata(key: unknown): boolean {
+    return key === "externalUrlPolicyManaged" || key === "externalUrlPolicyInvalid";
+}
+
+function isLockedManagedSetting(key: unknown): boolean {
+    return isManagedPolicyMetadata(key) || (isExternalUrlSetting(key) && getManagedExternalUrlPolicy().managed);
+}
+
 export function isValidSettingsKey(key: unknown): key is keyof Settings {
     return typeof key === "string" && SETTINGS_KEYS.has(key);
 }
 
 /** True when renderer IPC is allowed to write this settings key. */
 export function isIpcWritableSettingsKey(key: unknown): key is keyof Settings {
-    return isValidSettingsKey(key) && !IPC_BLOCKED_SETTINGS_KEYS.has(key);
+    return isValidSettingsKey(key) && !IPC_BLOCKED_SETTINGS_KEYS.has(key) && !isLockedManagedSetting(key);
 }
 
 const safeMode: Settings = {
@@ -141,10 +157,24 @@ export function getConfigLocation(): string {
     return `${storagePath}settings.json`;
 }
 export function getEntireConfig(): Settings {
-    return ensureConfigCache();
+    const policy = getManagedExternalUrlPolicy();
+    return {
+        ...ensureConfigCache(),
+        externalUrlAllowlistEnabled: getConfig("externalUrlAllowlistEnabled"),
+        externalUrlAllowlist: [...(getConfig("externalUrlAllowlist") ?? [])],
+        externalUrlPolicyManaged: policy.managed,
+        externalUrlPolicyInvalid: policy.invalid,
+    };
 }
 
 export function getConfig<K extends keyof Settings>(object: K): Settings[K] {
+    const policy = getManagedExternalUrlPolicy();
+    if (object === "externalUrlPolicyManaged") return policy.managed as Settings[K];
+    if (object === "externalUrlPolicyInvalid") return policy.invalid as Settings[K];
+    if (policy.managed) {
+        if (object === "externalUrlAllowlistEnabled") return policy.enabled as Settings[K];
+        if (object === "externalUrlAllowlist") return [...policy.domains] as Settings[K];
+    }
     if (process.argv.includes("--safe-mode")) {
         return safeMode[object];
     }
@@ -187,6 +217,7 @@ function sanitizeSettingsValue<K extends keyof Settings>(key: K, value: Settings
 }
 
 export function setConfig<K extends keyof Settings>(object: K, toSet: Settings[K]): void {
+    if (isLockedManagedSetting(object)) return;
     const parsed = ensureConfigCache();
     parsed[object] = sanitizeSettingsValue(object, toSet);
     const toSave = JSON.stringify(parsed, null, 4);
@@ -196,7 +227,7 @@ export function setConfigBulk(object: Settings): void {
     const existingData = configCache ?? ({} as Settings);
     const sanitizedEntries = Object.fromEntries(
         Object.entries(object)
-            .filter(([key]) => isValidSettingsKey(key))
+            .filter(([key]) => isValidSettingsKey(key) && !isLockedManagedSetting(key))
             .map(([key, value]) => [
                 key,
                 sanitizeSettingsValue(key as keyof Settings, value as Settings[keyof Settings]),
@@ -247,7 +278,9 @@ export function checkIfConfigIsBroken(): void {
 
         let configWasFine = true;
         const settingsKeys = Object.keys(settingsObject) as (keyof Settings)[];
-        const defaultKeys = Object.keys(defaults) as (keyof Settings)[];
+        // Managed filter preferences are projections, not required user-profile
+        // entries. Migration must not reset profiles or repeatedly fill locked keys.
+        const defaultKeys = (Object.keys(defaults) as (keyof Settings)[]).filter((key) => !isLockedManagedSetting(key));
 
         const missingKeysInSettings = defaultKeys.filter((key) => !settingsKeys.includes(key));
         configWasFine = missingKeysInSettings.length === 0;

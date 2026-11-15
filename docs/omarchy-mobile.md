@@ -1,6 +1,6 @@
 # Omarchy Mobile fork
 
-This branch builds Legcord 1.3.1-omarchy.6. It retains the existing `legcord`
+This branch builds Legcord 1.3.1-omarchy.7. It retains the existing `legcord`
 profile and login, and packages the application as `legcord-mobile-git` on Arch.
 Fork builds use manual updates so an upstream binary cannot replace the patch.
 
@@ -41,10 +41,64 @@ embeds while leaving Discord's infrastructure available. Invalid entries are
 shown as an error and cannot be saved. Adding a domain or turning off the embed
 filter does not allow links to open an external browser.
 
-The profile's `storage/settings.json` stores the embed options as
-`externalUrlAllowlistEnabled` and `externalUrlAllowlist`. These restrictions
-apply inside Legcord; they do not prevent browsing in other applications or
-prevent someone who can edit the settings from changing the embed allowlist.
+Without a parent policy, the profile's `storage/settings.json` stores the embed
+options as `externalUrlAllowlistEnabled` and `externalUrlAllowlist`.
+
+### Parent-managed embed policy (Linux)
+
+An administrator can manage the embed settings outside the user's profile at
+the fixed path `/etc/legcord/policy.json`. Install the restrictive example with
+a root-owned directory and file:
+
+```sh
+sudo install -d -o root -g root -m 0755 /etc/legcord
+sudo install -o root -g root -m 0644 \
+    /usr/share/doc/legcord-mobile-git/parent-policy.json.example /etc/legcord/policy.json
+```
+
+From a source checkout, use `packaging/parent-policy.json.example` as the input
+file instead.
+
+The example enables filtering with no allowed external sites:
+
+```json
+{
+    "version": 1,
+    "externalUrlAllowlistEnabled": true,
+    "externalUrlAllowlist": []
+}
+```
+
+Restart Legcord after installing or editing the policy. The Networking controls
+then show **Managed by your parent**: the switch is disabled, the effective
+domain list is read-only, and saving is disabled. The main process rejects
+changes to these settings, including individual and bulk settings writes.
+Profile edits, new or portable profiles, backup restores, command-line settings,
+and safe mode cannot override the parent policy. User main-process plugins are
+not loaded in managed mode because they can change Electron's enforcement hooks.
+
+Use administrator access, for example `sudoedit /etc/legcord/policy.json`, to
+change the policy, then restart Legcord. Entries still require exact HTTPS
+hostnames. Setting `externalUrlAllowlistEnabled` to `false` in this administrator
+file turns off embed filtering while keeping its controls read-only. Browser
+launches remain blocked independently of the embed policy.
+
+The policy directory and file must belong to root and must not be writable by
+group or other users. Symlinks are rejected. If `/etc/legcord` exists but the
+file is missing, unreadable, insecure, or invalid, Legcord keeps management
+active and blocks all external embeds. The settings page reports that the
+policy needs the parent's attention. Do not make the user's entire Legcord
+profile root-owned; ordinary app settings and login data must remain writable.
+
+When `/etc/legcord` does not exist, the settings remain user-managed. To return
+to that mode, an administrator must remove the policy file and its empty
+directory, then restart Legcord.
+
+These restrictions protect this installed client. An account with sudo/root
+access can replace the policy or application, and another client or browser
+can bypass an app-specific policy. Use a non-admin daily account and broader
+device restrictions when those routes must also be controlled. Enabling this
+policy does not change account privileges.
 
 ## Local voice dictation
 

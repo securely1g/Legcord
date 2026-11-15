@@ -2,6 +2,22 @@
     margin-bottom: 20px;
 }
 
+.managedNotice {
+    margin-bottom: 16px;
+    padding: 12px;
+    border: 1px solid var(--background-modifier-accent, #4e5058);
+    border-radius: 4px;
+    background: var(--background-secondary, #2b2d31);
+}
+
+.managedTitle {
+    margin: 0;
+    color: var(--text-normal);
+    font-size: 16px;
+    line-height: 24px;
+    font-weight: 600;
+}
+
 .title {
     display: block;
     margin-top: 16px;
@@ -37,6 +53,10 @@
 .editor:focus-visible {
     outline: 2px solid var(--text-link, #00a8fc);
     outline-offset: 2px;
+}
+
+.editor[readonly] {
+    cursor: default;
 }
 
 .error {

@@ -49,6 +49,10 @@ export interface Settings {
     externalUrlAllowlistEnabled: boolean;
     /** Subdomains must be listed separately. Discord infrastructure is allowed independently. */
     externalUrlAllowlist: string[];
+    /** Derived from the administrator's system policy; never a user preference. */
+    readonly externalUrlPolicyManaged?: boolean;
+    /** An invalid/unavailable managed policy enforces the restrictive fallback. */
+    readonly externalUrlPolicyInvalid?: boolean;
     skipSplash: boolean;
     performanceMode:
         | "battery"
