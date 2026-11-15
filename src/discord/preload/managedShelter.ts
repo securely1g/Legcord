@@ -74,7 +74,7 @@ function installManagedShelterSettingsGuard(filterLayout: (root: unknown) => boo
 
     const isBuiltInEntry = (element: Element) => {
         const key = element.getAttribute("data-settings-sidebar-item") ?? "";
-        return key.includes("shelter_shelter-settings_sidebar_item");
+        return key.includes("shelter_shelter-settings_panel") || key.includes("shelter_shelter-settings_sidebar_item");
     };
 
     const filterLiveLayout = (element: HTMLElement) => {
