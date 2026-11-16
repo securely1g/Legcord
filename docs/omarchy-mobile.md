@@ -1,14 +1,19 @@
 # Omarchy Mobile fork
 
-This branch builds Legcord 1.3.1-omarchy.8. It retains the existing `legcord`
+This branch builds Legcord 1.3.1-omarchy.9. It retains the existing `legcord`
 profile and login, and packages the application as `legcord-mobile-git` on Arch.
 Fork builds use manual updates so an upstream binary cannot replace the patch.
 
 ## Mobile layout
 
-Enable **Mobile Mode** in Legcord settings and restart. Mobile mode selects a
-native, opaque window and avoids desktop titlebar injection. The saved desktop
-window style is preserved for when mobile mode is disabled.
+Enable **Mobile Mode** in Legcord settings and restart. On Linux, mobile mode
+uses an opaque window without a titlebar or window-close button, leaving
+Discord's own settings-close button available. On Omarchy Mobile, swipe up
+from the dock to open recent apps, then flick Legcord's card upward to close
+the window; a keyboard can also use **Super + W**. The existing close-to-tray
+preference still applies. Mobile mode keeps native frames on Windows/macOS
+and avoids desktop titlebar injection. The saved desktop window style is
+preserved for when mobile mode is disabled.
 
 The bundled stylesheet increases message text and touch targets on narrow
 windows, independently of Quick CSS. Windows can fit displays down to 320 logical
