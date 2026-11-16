@@ -15,7 +15,12 @@ describe("window chrome policy", () => {
                     const settings = Object.freeze({ mobileMode: true, windowStyle, transparency });
                     assert.deepEqual(
                         getWindowChrome(settings, platform),
-                        { windowStyle: "native", transparency: "none", usesOverlayChrome: false },
+                        {
+                            windowStyle: "native",
+                            transparency: "none",
+                            usesOverlayChrome: false,
+                            frame: platform !== "linux",
+                        },
                         `${platform}: ${windowStyle}, ${transparency}`,
                     );
                 }
@@ -40,32 +45,43 @@ describe("window chrome policy", () => {
         }
     });
 
-    it("retains the macOS native-window transparency workaround on desktop", () => {
+    it("retains desktop native frames and the macOS transparency workaround", () => {
+        for (const platform of ["linux", "win32"]) {
+            for (const transparency of transparencies) {
+                assert.deepEqual(
+                    getWindowChrome({ mobileMode: false, windowStyle: "native", transparency }, platform),
+                    { windowStyle: "native", transparency, usesOverlayChrome: false, frame: true },
+                );
+            }
+        }
         for (const transparency of ["modern", "universal"] as const) {
             const settings = { mobileMode: false, windowStyle: "native", transparency } as const;
-            assert.equal(getWindowChrome(settings, "darwin").usesOverlayChrome, true);
-            assert.equal(getWindowChrome(settings, "linux").usesOverlayChrome, false);
-            assert.equal(getWindowChrome(settings, "win32").usesOverlayChrome, false);
+            assert.deepEqual(getWindowChrome(settings, "darwin"), {
+                windowStyle: "native",
+                transparency,
+                usesOverlayChrome: true,
+                frame: false,
+            });
         }
-        assert.equal(
-            getWindowChrome({ mobileMode: false, windowStyle: "native", transparency: "none" }, "darwin")
-                .usesOverlayChrome,
-            false,
+        assert.deepEqual(
+            getWindowChrome({ mobileMode: false, windowStyle: "native", transparency: "none" }, "darwin"),
+            { windowStyle: "native", transparency: "none", usesOverlayChrome: false, frame: true },
         );
     });
 
     it("retains desktop custom and legacy titlebar choices", () => {
         for (const platform of platforms) {
             for (const windowStyle of ["default", "overlay"] as const) {
-                assert.equal(
-                    getWindowChrome({ mobileMode: false, windowStyle, transparency: "none" }, platform)
-                        .usesOverlayChrome,
-                    true,
-                );
+                assert.deepEqual(getWindowChrome({ mobileMode: false, windowStyle, transparency: "none" }, platform), {
+                    windowStyle,
+                    transparency: "none",
+                    usesOverlayChrome: true,
+                    frame: false,
+                });
             }
             assert.deepEqual(
                 getWindowChrome({ mobileMode: false, windowStyle: "legacy", transparency: "none" }, platform),
-                { windowStyle: "legacy", transparency: "none", usesOverlayChrome: false },
+                { windowStyle: "legacy", transparency: "none", usesOverlayChrome: false, frame: false },
             );
         }
     });
