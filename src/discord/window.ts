@@ -26,6 +26,7 @@ import {
     MIN_WINDOW_WIDTH,
     sanitizeWindowBounds,
 } from "../common/windowBounds.js";
+import { getWindowChrome } from "../common/windowChrome.js";
 import { getWindowState, setWindowState } from "../common/windowState.js";
 import { applyStartupWindowVisibility, revealWindow } from "../common/windowVisibility.js";
 import { disconnectDbusService } from "../dbus.js";
@@ -417,6 +418,14 @@ function doAfterDefiningTheWindow(passedWindow: BrowserWindow): void {
 
 export function createWindow() {
     const storedBounds = getStoredWindowBounds();
+    const chrome = getWindowChrome(
+        {
+            mobileMode: getConfig("mobileMode"),
+            windowStyle: getConfig("windowStyle"),
+            transparency: getConfig("transparency"),
+        },
+        os.platform(),
+    );
     if (storedBounds.usedFallback) {
         console.log("[Window] Stored bounds were invalid or off-screen; using sanitized placement", storedBounds);
     }
@@ -430,7 +439,7 @@ export function createWindow() {
         show: false,
         darkTheme: true,
         icon: getConfig("customIcon") ?? path.join(import.meta.dirname, "../", "/assets/desktop.png"),
-        frame: false,
+        frame: chrome.frame,
         backgroundColor: "#202225",
         autoHideMenuBar: getConfig("autoHideMenuBar"),
         webPreferences: {
@@ -443,7 +452,7 @@ export function createWindow() {
             spellcheck: getConfig("spellcheck"),
         },
     };
-    switch (getConfig("windowStyle")) {
+    switch (chrome.windowStyle) {
         case "default":
             if (os.platform() === "win32") {
                 browserWindowOptions.titleBarStyle = "hidden";
@@ -453,7 +462,7 @@ export function createWindow() {
         case "native":
             // On macOS, frame:true + transparent/vibrancy makes the native title bar
             // and traffic lights invisible (Legcord#1095). Use overlay chrome instead.
-            if (os.platform() === "darwin" && getConfig("transparency") !== "none") {
+            if (os.platform() === "darwin" && chrome.transparency !== "none") {
                 browserWindowOptions.titleBarStyle = "hidden";
                 browserWindowOptions.titleBarOverlay = {
                     color: getConfig("overlayButtonColor"),
@@ -464,8 +473,6 @@ export function createWindow() {
                     x: 10,
                     y: 10,
                 };
-            } else {
-                browserWindowOptions.frame = true;
             }
             break;
         case "overlay":
@@ -489,7 +496,7 @@ export function createWindow() {
             }
             break;
     }
-    switch (getConfig("transparency")) {
+    switch (chrome.transparency) {
         case "universal":
             browserWindowOptions.backgroundColor = "#00000000";
             browserWindowOptions.transparent = true;

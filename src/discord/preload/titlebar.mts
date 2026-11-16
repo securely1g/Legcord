@@ -63,7 +63,7 @@ function injectTitlebar(isOverlay?: boolean): void {
     };
 }
 
-// Mobile mode uses a native frame even when the saved desktop preference is legacy.
+// Mobile mode selects its own window chrome even when the saved desktop preference is legacy.
 if (!ipcRenderer.sendSync("getConfig", "mobileMode")) {
     switch (ipcRenderer.sendSync("getConfig", "windowStyle")) {
         case "legacy":
